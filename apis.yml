@@ -1,0 +1,73 @@
+name: Odds API
+description: >-
+  OpenAPI-first sports betting odds API (odds-api.net) providing bookmaker odds, odds comparison, arbitrage, positive
+  EV, line movement, and racing/sports coverage via REST plus SSE and WebSocket streaming. Agent-native with an MCP
+  server, llms.txt, and agent instruction files, plus TypeScript and Python SDKs.
+url: https://raw.githubusercontent.com/api-evangelist/odds-api/refs/heads/main/apis.yml
+created: '2026-09-17'
+modified: '2026-09-17'
+specificationVersion: '0.21'
+tags:
+  - sports
+  - sports-betting
+  - betting-odds
+  - bookmaker-odds
+  - live-odds
+  - sportsbook
+  - racing
+  - REST
+  - Server-Sent-Events
+  - WebSocket
+  - OpenAPI
+  - MCP
+  - agent-native
+  - llms-txt
+  - SDK
+  - Postman
+apis:
+  - name: Odds API REST
+    description: >-
+      REST API for sports and racing betting odds with SSE and WebSocket streaming, arbitrage, positive EV, line
+      movement, bookmaker comparison, and results. API-key auth via X-API-Key.
+    humanURL: https://odds-api.net/docs
+    baseURL: https://api.odds-api.net/v1
+    tags:
+      - sports
+      - sports-betting
+      - betting-odds
+      - bookmaker-odds
+      - live-odds
+      - sportsbook
+      - racing
+      - REST
+      - Server-Sent-Events
+      - WebSocket
+      - OpenAPI
+      - MCP
+      - agent-native
+      - llms-txt
+      - SDK
+      - Postman
+    properties:
+      - type: OpenAPI
+        url: https://api.odds-api.net/v1/openapi.json
+      - type: OpenAPI
+        url: https://github.com/odds-api/odds-api/blob/main/openapi.yaml
+      - type: PostmanCollection
+        url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+      - type: Documentation
+        url: https://odds-api.net/docs
+      - type: Documentation
+        url: https://api.odds-api.net/v1/reference
+      - type: LLMsTxt
+        url: https://odds-api.net/llms.txt
+      - type: AgentSkill
+        url: https://github.com/odds-api/odds-api/blob/main/AGENTS.md
+maintainers:
+  - FN: Odds API
+    url: https://github.com/odds-api/odds-api
+generated:
+  by: apis.io/add
+  model: claude-opus-4-8
+  confidence: 95
+  at: '2026-09-17T03:58:31.951Z'

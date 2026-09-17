@@ -1,0 +1,34 @@
+generated: '2026-09-17'
+method: searched
+source: >-
+  https://odds-api.net/docs, https://odds-api.net/sla-status-support,
+  the public /v1/status endpoint, and openapi/odds-api-openapi.json.
+versioning:
+  scheme: uri-path
+  current_version: v1
+  spec_version: 1.0.0
+  note: Single published major version (V1) served at https://api.odds-api.net/v1.
+deprecation:
+  policy_documented: false
+  sunset_header: false
+  deprecation_header: false
+  deprecated_operations: []
+  note: >-
+    No deprecation/Sunset policy or RFC 8594 headers found; no operations are
+    flagged deprecated in the OpenAPI. UsageResponse notes legacy request-count
+    keys coexisting with newer API-credit fields (a soft migration signal).
+status_page:
+  url: https://odds-api.net/sla-status-support
+  status: 200
+  type: sla-and-status
+  machine_status_endpoint: https://api.odds-api.net/v1/status
+  note: >-
+    Human SLA/status page (availability targets, support expectations,
+    maintenance policy) plus a machine-readable public /status endpoint
+    (PublicStatusResponse with components, metrics, sources, rate-limit status).
+sla:
+  documented: true
+  source: https://odds-api.net/sla-status-support
+support:
+  email: support@odds-api.net
+  security_email: security@odds-api.net

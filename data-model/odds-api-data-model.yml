@@ -1,0 +1,94 @@
+generated: '2026-09-17'
+method: derived
+source: >-
+  Derived from components.schemas and id-reference fields in
+  openapi/odds-api-openapi.json (78 schemas).
+entities:
+  - name: Event
+    schema: EventSummary / EventDetail
+    key: event_id
+    attributes: [sport, league, event_state, start_time]
+  - name: Bookmaker
+    schema: BookmakerCatalogItem
+    key: bookmaker
+    attributes: [source_bookmaker, country coverage, feed availability]
+  - name: League
+    schema: CoverageLeague
+    key: league
+    attributes: [sport]
+  - name: OddLine
+    schema: OddLine
+    key: id
+    attributes: [bookmaker, market_key, selection_key, market_group_id, price]
+  - name: BetOpportunity
+    schema: BetOpportunity
+    key: id
+    attributes: [bookmaker_name, selection_key, strategy (arbitrage / pos_ev)]
+  - name: RacingEvent
+    schema: RacingEventSummary / RacingEventDetail
+    key: event_id
+    attributes: [discipline (horse/harness/greyhound), bookmaker_links]
+  - name: Result
+    schema: ResultItem
+    key: event_id
+  - name: ExchangeMarket
+    schema: ExchangeMarket / ExchangeMarketRunner
+    key: exchange_market_id
+    attributes: [exchange_selection_id, price levels]
+  - name: PredictionMarket
+    schema: PredictionContractBook / PredictionOrderBookItem
+    key: event_id
+relationships:
+  - from: OddLine
+    to: Event
+    type: belongs_to
+    via: event_id
+  - from: OddLine
+    to: Bookmaker
+    type: belongs_to
+    via: bookmaker
+  - from: OddLine
+    to: ExchangeMarket
+    type: belongs_to
+    via: exchange_market_id
+  - from: BetOpportunity
+    to: Event
+    type: belongs_to
+    via: event_id
+  - from: BetOpportunity
+    to: Bookmaker
+    type: belongs_to
+    via: bookmaker_name
+  - from: Event
+    to: OddLine
+    type: has_many
+    via: bookmakers
+  - from: Event
+    to: League
+    type: belongs_to
+    via: league
+  - from: League
+    to: Sport
+    type: belongs_to
+    via: sport
+  - from: Result
+    to: Event
+    type: belongs_to
+    via: event_id
+  - from: RacingEvent
+    to: Bookmaker
+    type: has_many
+    via: bookmaker_links
+  - from: ExchangeMarket
+    to: Event
+    type: belongs_to
+    via: event_id
+  - from: PredictionMarket
+    to: Event
+    type: belongs_to
+    via: event_id
+notes: >-
+  event_id is the central foreign key threading catalog -> events -> odds ->
+  results and the exchange/prediction order books. Freshness is carried on
+  odds/snapshot payloads via as_of_ts_ms and bookmaker_as_of_ts_ms rather than a
+  separate entity.

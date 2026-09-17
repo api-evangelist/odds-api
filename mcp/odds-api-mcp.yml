@@ -1,0 +1,77 @@
+generated: '2026-09-17'
+method: searched
+source: >-
+  https://odds-api.net/docs mcp guide (repo docs/mcp.md), mcp-server/ in the
+  odds-api/odds-api GitHub repo, and the @odds-api/mcp npm package.
+name: Odds API MCP Server
+description: >-
+  Official MCP server for sports and racing odds workflows. Distributed as a
+  locally-run stdio package (npx @odds-api/mcp); wraps the Odds API REST V1
+  contract as agent tools, including bookmaker comparison, arbitrage, positive
+  EV, line movement, racing odds, results, and bounded stream sampling.
+deployment:
+  mode: local-stdio
+  endpoint: null
+  install: "npx @odds-api/mcp"
+  package: https://www.npmjs.com/package/@odds-api/mcp
+  auth: api-key
+  verified: searched
+config:
+  client_example: |
+    {
+      "mcpServers": {
+        "odds-api": {
+          "command": "npx",
+          "args": ["@odds-api/mcp"],
+          "env": {
+            "ODDS_API_KEY": "your_api_key",
+            "ODDS_API_BASE_URL": "https://api.odds-api.net/v1"
+          }
+        }
+      }
+    }
+  mock_mode: "ODDS_API_MOCK=1 npx @odds-api/mcp"
+  env:
+    - ODDS_API_KEY
+    - ODDS_API_BASE_URL
+    - ODDS_API_MOCK
+tools:
+  - odds_api.search_events
+  - odds_api.get_event
+  - odds_api.get_event_bookmakers
+  - odds_api.get_odds
+  - odds_api.compare_odds
+  - odds_api.find_arbitrage
+  - odds_api.find_positive_ev
+  - odds_api.get_line_movement
+  - odds_api.get_leagues
+  - odds_api.get_bookmakers
+  - odds_api.get_bookmaker_countries
+  - odds_api.get_sports
+  - odds_api.get_results
+  - odds_api.search_racing_events
+  - odds_api.get_racing_event
+  - odds_api.get_racing_odds
+  - odds_api.get_api_metadata
+  - odds_api.get_account
+  - odds_api.get_usage
+  - odds_api.get_limits
+  - odds_api.get_streaming_info
+  - odds_api.get_stream_connection
+  - odds_api.sample_odds_stream
+  - odds_api.sample_event_odds_history_stream
+  - odds_api.sample_bets_stream
+  - odds_api.sample_racing_events_stream
+  - odds_api.sample_racing_odds_stream
+  - odds_api.open_stream
+  - odds_api.read_stream
+  - odds_api.list_streams
+  - odds_api.close_stream
+  - odds_api.get_market_schema
+tool_count: 32
+notes: >-
+  Not a hosted/remote MCP endpoint — an agent cannot reach it by URL; a human
+  installs and runs it over stdio first. The server calls the Odds API REST V1
+  with an X-API-Key. Optional server-side stream-broker tools (open/read/list/
+  close_stream) let the process act as a bounded SSE/WebSocket broker; the
+  documented production path connects to the raw SSE/WS endpoints from a backend.

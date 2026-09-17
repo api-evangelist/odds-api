@@ -1,0 +1,47 @@
+generated: '2026-09-17'
+method: searched
+source: >-
+  Registry metadata (registry.npmjs.org, pypi.org) plus the odds-api/odds-api
+  GitHub repo (sdks/typescript, sdks/python, mcp-server) and llms.txt agent notes
+  naming @odds-api/client, @odds-api/mcp, and odds-api-client.
+packages:
+  - name: "@odds-api/client"
+    registry: npm
+    language: javascript
+    official: true
+    version: 0.1.0
+    published: '2026-05-02'
+    url: https://www.npmjs.com/package/@odds-api/client
+    repo: https://github.com/odds-api/odds-api/tree/main/sdks/typescript
+    description: >-
+      Official TypeScript SDK for the Odds API — typed client over the REST
+      contract with mock mode (ODDS_API_MOCK=1) and ODDS_API_BASE_URL override.
+  - name: "@odds-api/mcp"
+    registry: npm
+    language: javascript
+    official: true
+    version: 0.1.0
+    published: '2026-05-02'
+    url: https://www.npmjs.com/package/@odds-api/mcp
+    repo: https://github.com/odds-api/odds-api/tree/main/mcp-server
+    description: >-
+      Official MCP server distributed as a locally-run stdio package
+      (npx @odds-api/mcp); exposes 32 Odds API tools to MCP-compatible agents.
+    note: >-
+      This is a local-stdio MCP package, not a hosted MCP endpoint; see
+      mcp/odds-api-mcp.yml deployment block.
+  - name: odds-api-client
+    registry: pypi
+    language: python
+    official: true
+    version: 0.1.1
+    published: '2026-04-29'
+    url: https://pypi.org/project/odds-api-client/
+    repo: https://github.com/odds-api/odds-api/tree/main/sdks/python
+    description: >-
+      Official Python SDK for the Odds API — typed client with mock mode and
+      base-URL override, mirroring the TypeScript SDK surface.
+notes: >-
+  All three packages are first-party (published from the odds-api GitHub org and
+  named in the hosted llms.txt). Latest releases (2026-04/05) postdate no newer
+  documented API version (V1, 1.0.0), so no SDK-abandonment signal is present.

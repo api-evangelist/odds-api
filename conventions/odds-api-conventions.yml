@@ -1,0 +1,84 @@
+generated: '2026-09-17'
+method: derived
+source: >-
+  Derived from openapi/odds-api-openapi.json (info.description, parameters,
+  response headers, security) and the hosted docs at https://odds-api.net/docs.
+authentication:
+  style: api-key
+  transport: header
+  header: X-API-Key
+  note: Sent on every request unless an endpoint explicitly states it is public.
+versioning:
+  style: uri-path
+  current: v1
+  base_url: https://api.odds-api.net/v1
+pagination:
+  style: cursor
+  params:
+    - limit
+    - cursor
+  note: >-
+    Event lists page with limit + cursor. Response caps discoverable via /limits
+    (events_limit_max, odds_snapshot_limit_max, bets_snapshot_limit_max).
+rate_limit_signaling:
+  headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Bucket
+    - Retry-After
+  exhaustion_status: 429
+  note: See rate-limits/odds-api-rate-limits.yml.
+error_envelope:
+  media_type: application/json
+  shape: "{ detail, code?, request_id? }"
+  format: custom-json
+  rfc9457: false
+  note: See errors/odds-api-problem-types.yml.
+request_tracing:
+  field: request_id
+  note: Returned in error envelopes for support/debugging.
+freshness_semantics:
+  fields:
+    - as_of_ts_ms
+    - bookmaker_as_of_ts_ms
+    - ttl_seconds
+    - target_refresh_interval_seconds
+  note: >-
+    Snapshots carry timestamps and optional TTLs; target_refresh_interval_seconds
+    is a scheduling hint, not an enforced delay. Cache by request shape.
+streaming:
+  transports:
+    - server-sent-events
+    - websocket
+  events:
+    - delta
+    - heartbeat
+    - resync
+  resume:
+    token_field: resume
+    reconnect_param: since
+    catchup_param: catchup
+  note: >-
+    /stream endpoints use text/event-stream; /ws endpoints use WebSockets with an
+    identical message shape. Store the latest resume value; on disconnect
+    reconnect with since=<last_resume>&catchup=true; on resync reload the snapshot.
+idempotency:
+  coverage: na
+  mechanism: none
+  note: >-
+    Read-only API — all 42 operations are HTTP GET with no mutating surface, so
+    no idempotency-key replay protection applies (GETs are inherently idempotent).
+reversibility:
+  state: na
+  note: >-
+    Read-only API — there are no write, create, or delete operations to reverse.
+dry_run_mode:
+  state: na
+  note: >-
+    No mutating operations. A local mock mode (ODDS_API_MOCK=1) exists for
+    offline development; see sandbox/odds-api-sandbox.yml.
+cross_links:
+  errors: errors/odds-api-problem-types.yml
+  rate_limits: rate-limits/odds-api-rate-limits.yml
+  authentication: authentication/odds-api-authentication.yml
+  lifecycle: lifecycle/odds-api-lifecycle.yml

@@ -1,0 +1,4 @@
+Contact: mailto:security@odds-api.net
+Policy: https://odds-api.net/security
+Preferred-Languages: en
+Canonical: https://odds-api.net/.well-known/security.txt

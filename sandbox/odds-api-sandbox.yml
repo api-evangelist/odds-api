@@ -1,0 +1,31 @@
+generated: '2026-09-17'
+method: searched
+source: >-
+  https://odds-api.net/docs (docs/mcp.md), AGENTS.md, and the codex SKILL.md in
+  the odds-api/odds-api GitHub repo.
+sandbox:
+  type: local-mock
+  description: >-
+    Odds API ships no hosted sandbox environment; instead the SDKs, examples, and
+    MCP server support a local mock mode that returns representative fixture data
+    without live credentials or network calls.
+  mock_mode:
+    env: ODDS_API_MOCK=1
+    example: "ODDS_API_MOCK=1 npx @odds-api/mcp"
+    applies_to:
+      - "@odds-api/client (TypeScript SDK)"
+      - odds-api-client (Python SDK)
+      - "@odds-api/mcp (MCP server)"
+      - examples/javascript, examples/python, examples/minimal-rest
+    purpose: local development, demos, generated apps, and tests
+  base_url_override:
+    env: ODDS_API_BASE_URL
+    default: https://api.odds-api.net/v1
+  live_auth:
+    env: ODDS_API_KEY
+    header: X-API-Key
+  test_keys: null
+  test_cards: null
+  note: >-
+    Not a payments API — no test cards, hosted test tokens, or test clocks apply.
+    Mock mode is offline fixture data, not a separate hosted test environment.

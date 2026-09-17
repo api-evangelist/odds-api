@@ -1,0 +1,20 @@
+generated: '2026-09-17'
+api: Odds API REST
+source_spec: openapi/odds-api-openapi.json
+skills:
+  - file: odds-api-provider-skill.md
+    name: odds-api (provider-published)
+    method: searched
+    source: https://github.com/odds-api/odds-api/blob/main/agents/codex-skill/SKILL.md
+  - file: odds-api-arbitrage-scanner.md
+    name: Arbitrage scanner
+    method: generated
+    operations: [snapshot_bets_snapshot_get, bookmakers_bookmakers_get, get_event_events__event_id__get]
+  - file: odds-api-positive-ev-scanner.md
+    name: Positive EV scanner
+    method: generated
+    operations: [snapshot_bets_snapshot_get, sports_sports_get, leagues_leagues_get]
+  - file: odds-api-line-movement.md
+    name: Line movement tracker
+    method: generated
+    operations: [list_events_events_get, odds_history_events__event_id__odds_history_get, odds_snapshot_events__event_id__odds_snapshot_get]

@@ -1,0 +1,52 @@
+generated: '2026-09-17'
+method: searched
+source: >-
+  https://odds-api.net/pricing (per-plan request-rate and stream caps),
+  openapi/odds-api-openapi.json (429 response headers, LimitsResponse), and
+  info.description backoff guidance.
+response_headers:
+  - X-RateLimit-Limit
+  - X-RateLimit-Remaining
+  - X-RateLimit-Bucket
+  - Retry-After
+exhaustion_status: 429
+backoff: >-
+  Honor Retry-After when present; otherwise jittered exponential backoff. Use
+  /usage to detect monthly API-credit quota exhaustion and /limits to discover
+  response, stream, and plan caps.
+limit_count: 5
+limits:
+  - scope: per-key
+    window: minute
+    tier: Starter 50K
+    limit: 60
+  - scope: per-key
+    window: minute
+    tier: Builder 2M
+    limit: 300
+  - scope: per-key
+    window: minute
+    tier: Live 20M
+    limit: 600
+  - scope: per-key
+    window: minute
+    tier: Pro 75M
+    limit: 1200
+  - scope: per-key
+    window: minute
+    tier: Scale
+    limit: custom
+quotas:
+  metering: >-
+    Monthly odds-request allowance per plan (50K / 2M / 20M / 75M / 100M+).
+    Most standard calls use 1 credit; large odds snapshots, history, broad
+    aggregate feeds, and support-approved betting feeds may use multiple credits
+    as weighted metering rolls out. Usage is hard-capped by default.
+  streaming:
+    metering: stream-hours per month with a per-plan concurrent-connection cap.
+  response_caps_source: GET /limits (events_limit_max, odds_snapshot_limit_max, bets_snapshot_limit_max)
+  usage_endpoint: GET /usage
+oversize_status:
+  code: 413
+  scope: odds snapshot
+  note: Odds snapshot exceeding allowed size returns 413; narrow markets/bookmakers.

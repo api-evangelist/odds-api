@@ -1,0 +1,43 @@
+generated: '2026-09-17'
+method: derived
+source: >-
+  Derived from openapi/odds-api-openapi.json (securitySchemes, parameters,
+  response media types) and the docs at https://odds-api.net/docs. Sports-betting
+  odds has no cross-cutting API domain standard, so no domain_standard is asserted.
+conformance:
+  - id: openapi-3.1
+    conforms: true
+    evidence: "openapi/odds-api-openapi.json declares openapi: 3.1.0 with 42 operations."
+  - id: api-key-auth
+    conforms: true
+    evidence: "components.securitySchemes.ApiKeyAuth (apiKey in header X-API-Key)."
+  - id: oauth2
+    conforms: false
+    evidence: No oauth2/openIdConnect securityScheme; no OAuth discovery documents served.
+  - id: rfc9457
+    conforms: false
+    evidence: >-
+      Errors use a custom {detail, code, request_id} JSON envelope; no
+      application/problem+json media type is declared.
+  - id: cursor-pagination
+    conforms: true
+    evidence: Event-list operations accept limit + cursor parameters (info.description + params).
+  - id: rate-limit-headers
+    conforms: true
+    evidence: >-
+      429 responses declare X-RateLimit-Limit, X-RateLimit-Remaining,
+      X-RateLimit-Bucket and Retry-After headers.
+  - id: sse-streaming
+    conforms: true
+    evidence: /stream operations return text/event-stream with delta/heartbeat/resync events.
+  - id: websocket-streaming
+    conforms: true
+    evidence: /ws operations upgrade to WebSocket (HTTP 101) with the same message shape as SSE.
+  - id: rfc9116-security-txt
+    conforms: true
+    evidence: https://odds-api.net/.well-known/security.txt returns a valid security.txt (200).
+domain_standard: null
+domain_standard_note: >-
+  Sports-betting / bookmaker-odds has no recognized cross-vendor API domain
+  standard (no SCIM/OData/OpenRTB/FHIR/ISO-20022 analogue applies). Reward-only
+  dimension — left null rather than invented.

@@ -1,0 +1,56 @@
+generated: '2026-09-17'
+method: derived
+source: >-
+  Derived from the response objects and components.schemas.ErrorResponse in
+  openapi/odds-api-openapi.json, enriched with the error handling guidance in
+  info.description.
+format: custom-json
+media_type: application/json
+envelope:
+  schema: ErrorResponse
+  fields:
+    - name: detail
+      required: true
+      description: Human-readable error detail (string, object, or FastAPI validation array).
+    - name: code
+      required: false
+      description: Optional stable error code when the endpoint provides one.
+    - name: request_id
+      required: false
+      description: Optional request identifier for support/debugging.
+notes: >-
+  Not RFC 9457 problem+json — errors use a FastAPI-style {detail, code,
+  request_id} JSON envelope. No application/problem+json media type is declared
+  anywhere in the contract.
+problem_types:
+  - status: 400
+    title: Bad Request
+    meaning: Invalid parameters, malformed query, or unsupported filter combination.
+    remediation: Validate query parameters against the OpenAPI schema before retrying.
+  - status: 401
+    title: Unauthorized
+    meaning: Missing or invalid X-API-Key.
+    remediation: Send a valid key in the X-API-Key header on every non-public request.
+  - status: 403
+    title: Forbidden
+    meaning: Key is valid but the plan/capability does not permit this endpoint, feed, or bookmaker.
+    remediation: Check enabled capabilities via /me and upgrade the plan or bookmaker allowance.
+  - status: 404
+    title: Not Found
+    meaning: Unknown event_id, resource, or route.
+    remediation: Re-discover ids from catalog/event-list endpoints; do not construct ids.
+  - status: 413
+    title: Payload Too Large
+    meaning: Requested odds snapshot exceeds the allowed response size (odds snapshot endpoint).
+    remediation: Narrow markets/bookmakers or reduce the requested breadth; respect /limits caps.
+  - status: 429
+    title: Too Many Requests
+    meaning: Per-minute rate limit or monthly credit quota exceeded.
+    remediation: >-
+      Honor Retry-After when present, otherwise jittered exponential backoff;
+      use /usage to detect credit exhaustion. See rate-limits/odds-api-rate-limits.yml.
+    schema: RateLimitResponse
+  - status: 500
+    title: Internal Server Error
+    meaning: Unexpected server-side failure.
+    remediation: Retry with backoff; if persistent, report request_id to support@odds-api.net.

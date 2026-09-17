@@ -1,0 +1,67 @@
+generated: '2026-09-17'
+method: searched
+source: https://odds-api.net/pricing
+currency: USD
+billing_period: month
+plan_count: 5
+notes: >-
+  Volume-based tiers metered on monthly odds requests plus a streaming
+  stream-hours allowance and a per-minute rate limit. Usage is hard-capped by
+  default ("no surprise overages"). Positive-EV/arbitrage bet feeds are included
+  on every tier but limited by a per-tier bookmaker count. Historical odds are a
+  paid add-on. In-play odds are not currently supported.
+plans:
+  - name: Starter 50K
+    price: 30
+    currency: USD
+    period: month
+    included_requests: 50000
+    stream_hours: 150
+    concurrent_streams: 1
+    rate_limit_per_min: 60
+    bets_bookmaker_limit: 2
+    support: self-serve
+  - name: Builder 2M
+    price: 90
+    currency: USD
+    period: month
+    included_requests: 2000000
+    stream_hours: 1500
+    concurrent_streams: 8
+    rate_limit_per_min: 300
+    bets_bookmaker_limit: 6
+    support: email
+  - name: Live 20M
+    price: 250
+    currency: USD
+    period: month
+    included_requests: 20000000
+    stream_hours: 6000
+    concurrent_streams: 25
+    rate_limit_per_min: 600
+    bets_bookmaker_limit: 15
+    support: priority email
+  - name: Pro 75M
+    price: 500
+    currency: USD
+    period: month
+    included_requests: 75000000
+    stream_hours: 20000
+    concurrent_streams: 75
+    rate_limit_per_min: 1200
+    bets_bookmaker_limit: 50
+    support: priority email plus onboarding
+  - name: Scale
+    price: null
+    currency: USD
+    period: month
+    included_requests: "100M+ typical"
+    stream_hours: custom
+    concurrent_streams: custom
+    rate_limit_per_min: custom
+    bets_bookmaker_limit: custom
+    support: dedicated
+    note: Custom / contact sales.
+add_ons:
+  - name: Historical odds
+    note: Paid add-on; lookback options described at https://odds-api.net/historical-odds-api

@@ -1,0 +1,42 @@
+Exceptional coverage, fast delivery and dependable uptime
+
+# odds-api
+
+> Sports betting odds API for bookmaker coverage, events, streaming updates, OpenAPI docs, SDKs, and agent integrations.
+
+## Canonical URLs
+
+- Website: https://odds-api.net
+- Documentation: https://odds-api.net/docs
+- Coverage: https://odds-api.net/coverage
+- Historical odds API: https://odds-api.net/historical-odds-api
+- Sports odds API: https://odds-api.net/sports-odds-api
+- Sports odds API for Python models: https://odds-api.net/sports-odds-api-python
+- Build an odds comparison site: https://odds-api.net/use-cases/odds-comparison-site
+- Build a sports betting model with an odds API: https://odds-api.net/guides/build-sports-betting-model-from-odds-api
+- Pinnacle odds API: https://odds-api.net/bookmakers/pinnacle
+- Horse racing odds API: https://odds-api.net/racing/horse
+- Security: https://odds-api.net/security
+- OpenAPI: https://odds-api.net/openapi.json
+- API base URL: https://api.odds-api.net/v1
+- Public GitHub: https://github.com/odds-api/odds-api
+
+## Main Endpoints
+
+- `GET /v1/bookmakers` - supported bookmakers, country coverage, and feed availability.
+- `GET /v1/coverage` - bookmaker, sport, league, and approximate market coverage.
+- `GET /v1/events` - upcoming fixtures with league, team, start-time, and status metadata.
+- `GET /v1/events/{event_id}/odds/snapshot` - pre-match bookmaker prices for moneylines, spreads, totals, and related markets.
+- `GET /v1/events/{event_id}/odds/history` - retained pre-match selection history for enabled accounts.
+- `GET /v1/racing/events` - horse, harness, and greyhound race discovery.
+
+## Agent Notes
+
+- Use `ODDS_API_KEY` for authenticated API calls.
+- Use `ODDS_API_BASE_URL=https://api.odds-api.net/v1` for SDKs and examples.
+- Prefer the OpenAPI document for exact schemas and parameter contracts.
+- Public package names are `@odds-api/client`, `@odds-api/mcp`, and `odds-api-client`.
+
+## Support
+
+- Contact: support@odds-api.net

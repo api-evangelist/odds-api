@@ -1,0 +1,21 @@
+generated: '2026-09-17'
+method: probed
+source: live DNS/TLS/HTTP probes of apis.yml + OpenAPI hosts
+hosts:
+- host: odds-api.net
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Nov 20 00:04:03 2026 GMT
+  hsts: false
+- host: api.odds-api.net
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Nov 26 22:21:59 2026 GMT
+  hsts: null
+domains:
+- domain: odds-api.net
+  dnssec: false
+  caa: []
+  spf: true
+  dmarc: true
+  dmarc_policy: quarantine

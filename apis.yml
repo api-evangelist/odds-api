@@ -50,8 +50,12 @@ apis:
       - Postman
     properties:
       - type: OpenAPI
+        url: openapi/odds-api-openapi.json
+      - type: OpenAPI
+        name: Odds API OpenAPI (provider-hosted)
         url: https://api.odds-api.net/v1/openapi.json
       - type: OpenAPI
+        name: Odds API OpenAPI (GitHub)
         url: https://github.com/odds-api/odds-api/blob/main/openapi.yaml
       - type: PostmanCollection
         url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
@@ -63,11 +67,77 @@ apis:
         url: https://odds-api.net/llms.txt
       - type: AgentSkill
         url: https://github.com/odds-api/odds-api/blob/main/AGENTS.md
+      - type: Overlay
+        url: overlays/odds-api-overlay.yaml
+      - type: MCPServer
+        url: mcp/odds-api-mcp.yml
+      - type: ToolCrosswalk
+        url: mcp/odds-api-tool-crosswalk.yml
+      - type: SDKs
+        url: packages/odds-api-packages.yml
+      - type: Packages
+        url: packages/odds-api-packages.yml
+      - type: ErrorCatalog
+        url: errors/odds-api-problem-types.yml
+      - type: Conventions
+        url: conventions/odds-api-conventions.yml
+      - type: DataModel
+        url: data-model/odds-api-data-model.yml
+      - type: Sandbox
+        url: sandbox/odds-api-sandbox.yml
+      - type: Plans
+        url: plans/odds-api-plans-pricing.yml
+      - type: RateLimits
+        url: rate-limits/odds-api-rate-limits.yml
+      - type: Conformance
+        url: conformance/odds-api-conformance.yml
+      - type: Lifecycle
+        url: lifecycle/odds-api-lifecycle.yml
+      - type: StatusPage
+        url: https://odds-api.net/sla-status-support
+      - type: APIReference
+        url: https://api.odds-api.net/v1/reference
+      - type: Pricing
+        url: https://odds-api.net/pricing
+      - type: SignUp
+        url: https://odds-api.net/signup
 maintainers:
   - FN: Odds API
+    email: support@odds-api.net
     url: https://github.com/odds-api/odds-api
+image: https://raw.githubusercontent.com/odds-api/odds-api/main/assets/odds-api-hero.svg
 generated:
   by: apis.io/add
   model: claude-opus-4-8
   confidence: 95
   at: '2026-09-17T03:58:31.951Z'
+common:
+- type: VulnerabilityDisclosure
+  url: security/odds-api-vulnerability-disclosure.yml
+- type: DomainSecurity
+  url: security/odds-api-domain-security.yml
+- type: Authentication
+  url: authentication/odds-api-authentication.yml
+- type: Security
+  url: security/odds-api-vulnerability-disclosure.yml
+- type: WellKnown
+  url: well-known/odds-api-well-known.yml
+- type: SecurityTxt
+  url: well-known/odds-api-security.txt
+- type: AgentSkill
+  url: skills/_index.yml
+- type: GitHubOrganization
+  url: https://github.com/odds-api
+- type: DeveloperPortal
+  url: https://odds-api.net/docs
+- type: TermsOfService
+  url: https://odds-api.net/terms
+- type: PrivacyPolicy
+  url: https://odds-api.net/privacy
+- type: Website
+  url: https://odds-api.net/
+x-enrichment:
+  date: '2026-09-17'
+  status: enriched
+  artifacts_added: 24
+  pass: local-v3

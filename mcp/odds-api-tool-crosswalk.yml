@@ -1,0 +1,175 @@
+generated: '2026-09-17'
+method: derived
+source: >-
+  Binding of the 32 tools in docs/mcp.md (@odds-api/mcp) to operationIds in
+  openapi/odds-api-openapi.json. The live MCP inputSchemas are not published;
+  bindings are mapped by name + documented semantics with honest confidence.
+surfaces:
+  openapi: openapi/odds-api-openapi.json
+  graphql: null
+  mcp: "npx @odds-api/mcp (local-stdio; inputSchemas not published)"
+  gated:
+    - "MCP live tools/list requires local install + ODDS_API_KEY; mapped by name/semantics."
+crosswalk:
+  - tool: odds_api.search_events
+    category: events
+    rest: [list_events_events_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_event
+    category: events
+    rest: [get_event_events__event_id__get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_event_bookmakers
+    category: events
+    rest: [event_bookmakers_events__event_id__bookmakers_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_odds
+    category: odds
+    rest: [odds_snapshot_events__event_id__odds_snapshot_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.compare_odds
+    category: odds
+    rest: [odds_snapshot_events__event_id__odds_snapshot_get]
+    binding: composite
+    confidence: medium
+    note: Compares bookmaker prices within an odds snapshot response.
+  - tool: odds_api.find_arbitrage
+    category: betting-opportunities
+    rest: [snapshot_bets_snapshot_get]
+    binding: direct
+    confidence: high
+    note: "/bets/snapshot?strategies=arbitrage"
+  - tool: odds_api.find_positive_ev
+    category: betting-opportunities
+    rest: [snapshot_bets_snapshot_get]
+    binding: direct
+    confidence: high
+    note: "/bets/snapshot?strategies=pos_ev"
+  - tool: odds_api.get_line_movement
+    category: odds
+    rest: [odds_history_events__event_id__odds_history_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_leagues
+    category: catalog
+    rest: [leagues_leagues_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_bookmakers
+    category: catalog
+    rest: [bookmakers_bookmakers_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_bookmaker_countries
+    category: catalog
+    rest: [bookmaker_countries_bookmakers_countries_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_sports
+    category: catalog
+    rest: [sports_sports_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_results
+    category: results
+    rest: [get_event_results_events__event_id__results_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.search_racing_events
+    category: racing
+    rest: [list_racing_events_racing_events_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_racing_event
+    category: racing
+    rest: [get_racing_event_racing_events__event_id__get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_racing_odds
+    category: racing
+    rest: [get_racing_odds_snapshot_racing_events__event_id__odds_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_api_metadata
+    category: start-here
+    rest: [root__get]
+    binding: direct
+    confidence: medium
+  - tool: odds_api.get_account
+    category: account
+    rest: [me_me_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_usage
+    category: account
+    rest: [usage_usage_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.get_limits
+    category: account
+    rest: [limits_limits_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.sample_odds_stream
+    category: streaming
+    rest: [odds_stream_events__event_id__odds_stream_get]
+    binding: direct
+    confidence: high
+    note: Bounded SSE sample of the odds stream.
+  - tool: odds_api.sample_event_odds_history_stream
+    category: streaming
+    rest: [odds_history_stream_events__event_id__odds_history_stream_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.sample_bets_stream
+    category: streaming
+    rest: [stream_bets_stream_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.sample_racing_events_stream
+    category: streaming
+    rest: [stream_racing_events_racing_events_stream_get]
+    binding: direct
+    confidence: high
+  - tool: odds_api.sample_racing_odds_stream
+    category: streaming
+    rest: [stream_racing_odds_racing_events__event_id__odds_stream_get]
+    binding: direct
+    confidence: high
+mcp_only:
+  - tool: odds_api.get_streaming_info
+    reason: Composite helper describing stream families; no single REST operation.
+  - tool: odds_api.get_stream_connection
+    reason: Composite helper returning snapshot URL + raw SSE/WS connection details.
+  - tool: odds_api.get_market_schema
+    reason: Market-schema inspection helper; not a distinct public REST operation.
+  - tool: odds_api.open_stream
+    reason: Optional server-side stream-broker action (no REST equivalent).
+  - tool: odds_api.read_stream
+    reason: Optional server-side stream-broker action (no REST equivalent).
+  - tool: odds_api.list_streams
+    reason: Optional server-side stream-broker action (no REST equivalent).
+  - tool: odds_api.close_stream
+    reason: Optional server-side stream-broker action (no REST equivalent).
+rest_only:
+  - public_status_status_get
+  - coverage_coverage_get
+  - list_live_event_candidates_events_live_get
+  - exchange_markets_events__event_id__exchange_markets_get
+  - exchange_orderbook_snapshot_events__event_id__exchange_orderbook_snapshot_get
+  - exchange_orderbook_stream_events__event_id__exchange_orderbook_stream_get
+  - betfair_event_markets_exchange_betfair_events__betfair_event_id__markets_get
+  - prediction_orderbook_snapshot_events__event_id__prediction_markets_orderbook_snapshot_get
+  - prediction_orderbook_stream_events__event_id__prediction_markets_orderbook_stream_get
+  - odds_ticker_widgets_odds_ticker_get
+  - "all /ws WebSocket operations (odds/ws, bets/ws, racing ws, exchange ws, prediction ws, tennis scores ws)"
+coverage:
+  mcp_tools: 32
+  mapped_to_rest: 25
+  mcp_only: 7
+  rest_operations_total: 42
+  rest_only_uncovered: "~13 (exchange/prediction/tennis order books, widgets, live candidates, raw /ws transports)"

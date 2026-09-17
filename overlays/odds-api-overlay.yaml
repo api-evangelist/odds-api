@@ -1,0 +1,34 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enrichment overlay for Odds API
+  version: 1.0.0
+  x-generated: '2026-09-17'
+  x-method: generated
+  x-source: >-
+    Enhancements captured by API Evangelist enrichment over
+    openapi/odds-api-openapi.json — non-destructive; does not mutate the original.
+extends: ../openapi/odds-api-openapi.json
+actions:
+  - target: $.info
+    description: Annotate confirmed production base and agent-readiness posture.
+    update:
+      x-apievangelist:
+        production_base_url: https://api.odds-api.net/v1
+        auth: { scheme: apiKey, header: X-API-Key }
+        agent_native: true
+        mcp: local-stdio (@odds-api/mcp)
+        llms_txt: https://odds-api.net/llms.txt
+        read_only: true
+        streaming: [server-sent-events, websocket]
+  - target: $.info
+    description: Record the pricing/rate-limit reference for downstream tooling.
+    update:
+      x-apievangelist-plans: plans/odds-api-plans-pricing.yml
+      x-apievangelist-rate-limits: rate-limits/odds-api-rate-limits.yml
+  - target: "$.paths['/bets/snapshot'].get"
+    description: Flag the betting-opportunity snapshot as the arbitrage/positive-EV entry point.
+    update:
+      x-apievangelist-strategies: [arbitrage, pos_ev]
+      x-apievangelist-note: >-
+        Selectable via the strategies query parameter; bookmaker breadth is capped
+        per pricing tier. Never present arbitrage/EV as guaranteed profit.

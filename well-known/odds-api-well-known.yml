@@ -1,0 +1,48 @@
+generated: '2026-09-17'
+method: probed
+source: Live probes of /.well-known/* on each known host.
+hosts:
+  - host: odds-api.net
+    documents:
+      - path: /.well-known/security.txt
+        status: 200
+        file: odds-api-security.txt
+        content_type: text/plain
+      - path: /.well-known/openid-configuration
+        status: 404
+      - path: /.well-known/oauth-authorization-server
+        status: 404
+      - path: /.well-known/oauth-protected-resource
+        status: 404
+      - path: /.well-known/api-catalog
+        status: 404
+      - path: /.well-known/ai-plugin.json
+        status: 404
+      - path: /.well-known/agent-card.json
+        status: 404
+      - path: /.well-known/agent.json
+        status: 404
+  - host: api.odds-api.net
+    documents:
+      - path: /.well-known/security.txt
+        status: 404
+      - path: /.well-known/openid-configuration
+        status: 404
+      - path: /.well-known/oauth-authorization-server
+        status: 404
+      - path: /.well-known/oauth-protected-resource
+        status: 404
+      - path: /.well-known/api-catalog
+        status: 404
+      - path: /.well-known/ai-plugin.json
+        status: 404
+      - path: /.well-known/agent-card.json
+        status: 429
+      - path: /.well-known/agent.json
+        status: 404
+notes: >-
+  Only odds-api.net serves a real /.well-known document: a valid RFC 9116
+  security.txt (Contact + Policy + Canonical). No OAuth/OIDC discovery, no
+  ai-plugin, and no A2A agent card on any host (the api.odds-api.net agent-card
+  probe returned 429 rate-limit, not a document). WellKnown + SecurityTxt
+  pointers are emitted for the served security.txt only.

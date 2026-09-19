@@ -8,6 +8,23 @@ created: '2026-09-17'
 modified: '2026-09-17'
 specificationVersion: '0.21'
 tags:
+  - Sports
+  - Sports Betting
+  - betting-odds
+  - bookmaker-odds
+  - live-odds
+  - Sportsbook
+  - Racing
+  - REST
+  - Server-Sent Events
+  - WebSocket
+  - OpenAPI
+  - MCP
+  - agent-native
+  - llms-txt
+  - SDK
+  - Postman
+tags_raw:
   - sports
   - sports-betting
   - betting-odds
@@ -32,6 +49,23 @@ apis:
     humanURL: https://odds-api.net/docs
     baseURL: https://api.odds-api.net/v1
     tags:
+      - Sports
+      - Sports Betting
+      - betting-odds
+      - bookmaker-odds
+      - live-odds
+      - Sportsbook
+      - Racing
+      - REST
+      - Server-Sent Events
+      - WebSocket
+      - OpenAPI
+      - MCP
+      - agent-native
+      - llms-txt
+      - SDK
+      - Postman
+    tags_raw:
       - sports
       - sports-betting
       - betting-odds

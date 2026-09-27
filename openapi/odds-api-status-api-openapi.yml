@@ -1,0 +1,336 @@
+openapi: 3.2.0
+info:
+  title: Odds Status API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Status
+  description: Buyer-facing API availability, latency, stream health, and rate-limit health.
+paths:
+  /status:
+    get:
+      tags:
+      - Status
+      summary: 'API status: Public health summary'
+      operationId: public_status_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStatusResponse'
+              examples:
+                default:
+                  summary: 'API status: Public health summary'
+                  value:
+                    status: operational
+                    as_of: '2026-04-29T10:25:00Z'
+                    window_seconds: 300
+                    components:
+                    - id: rest_api
+                      name: REST API
+                      status: operational
+                      metrics:
+                        uptime_pct: 100.0
+                        p50_ms: 24.0
+                        p95_ms: 410.0
+                        p99_ms: 846.0
+                        error_rate_pct: 0.02
+                    rate_limits:
+                      status: operational
+                      throttled_pct: 0.4
+                    source:
+                      fresh: true
+                      age_seconds: 18
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns a sanitized public status summary for buyer-facing pages. The response includes recent component availability, latency percentiles, 5xx error rate, stream health, and rate-limit health without exposing internal service names, infrastructure metrics, bookmaker details, raw traffic volume, or incident history.
+      security: []
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+components:
+  schemas:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    PublicStatusMetrics:
+      properties:
+        uptime_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Uptime Pct
+        p50_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P50 Ms
+        p95_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P95 Ms
+        p99_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P99 Ms
+        error_rate_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Error Rate Pct
+      type: object
+      title: PublicStatusMetrics
+    PublicStatusSource:
+      properties:
+        fresh:
+          type: boolean
+          title: Fresh
+        age_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Age Seconds
+      type: object
+      required:
+      - fresh
+      title: PublicStatusSource
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    PublicStatusRateLimits:
+      properties:
+        status:
+          type: string
+          title: Status
+        throttled_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Throttled Pct
+      type: object
+      required:
+      - status
+      title: PublicStatusRateLimits
+    PublicStatusComponent:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        status:
+          type: string
+          title: Status
+        latency_source:
+          type: string
+          title: Latency Source
+          default: http
+        metrics:
+          $ref: '#/components/schemas/PublicStatusMetrics'
+      type: object
+      required:
+      - id
+      - name
+      - status
+      title: PublicStatusComponent
+    PublicStatusResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        as_of:
+          type: string
+          title: As Of
+        window_seconds:
+          type: integer
+          title: Window Seconds
+        components:
+          items:
+            $ref: '#/components/schemas/PublicStatusComponent'
+          type: array
+          title: Components
+        rate_limits:
+          $ref: '#/components/schemas/PublicStatusRateLimits'
+        source:
+          $ref: '#/components/schemas/PublicStatusSource'
+        recent_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recent Status
+        recent_window_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Recent Window Seconds
+        recent_components:
+          items:
+            $ref: '#/components/schemas/PublicStatusComponent'
+          type: array
+          title: Recent Components
+        recent_rate_limits:
+          anyOf:
+          - $ref: '#/components/schemas/PublicStatusRateLimits'
+          - type: 'null'
+      type: object
+      required:
+      - status
+      - as_of
+      - window_seconds
+      - rate_limits
+      - source
+      title: PublicStatusResponse
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

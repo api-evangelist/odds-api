@@ -1,0 +1,506 @@
+openapi: 3.2.0
+info:
+  title: Odds Account API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Account
+  description: Current API identity, usage counters, and contract limits.
+paths:
+  /me:
+    get:
+      tags:
+      - Account
+      summary: 'Account: Current identity'
+      operationId: me_me_get
+      security:
+      - ApiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiIdentityResponse'
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns the authenticated API identity and enabled product capabilities for the supplied key.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /usage:
+    get:
+      tags:
+      - Account
+      summary: 'Account: Usage'
+      operationId: usage_usage_get
+      security:
+      - ApiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageResponse'
+              examples:
+                default:
+                  summary: 'Account: Usage'
+                  value:
+                    period_start_utc: '2026-05-01T00:00:00Z'
+                    period_end_utc: '2026-06-01T00:00:00Z'
+                    plan: live
+                    pricing_model: odds_api_net_v2
+                    api_credits_used: 18420
+                    api_credits_limit: 20000000
+                    stream_hours_used: 438.25
+                    stream_hours_limit: 6000
+                    stream_logical_bytes_used: 187654321
+                    stream_logical_bytes_limit: 536870912000
+                    stream_concurrent_units_used: 7
+                    stream_concurrent_units_limit: 25
+                    exceeded: false
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns quota and usage counters for the supplied API key. New odds-api.net pricing uses API credits rather than raw request counts. Production clients should check this endpoint when 429 responses persist so quota exhaustion does not become an infinite retry loop.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /limits:
+    get:
+      tags:
+      - Account
+      summary: 'Account: Limits'
+      operationId: limits_limits_get
+      security:
+      - ApiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitsResponse'
+              examples:
+                default:
+                  summary: 'Account: Limits'
+                  value:
+                    responses:
+                      events_limit_max: 1000
+                      odds_snapshot_limit_max: 25000
+                      bets_snapshot_limit_max: 20000
+                    sse:
+                      heartbeat_sec_min: 5
+                      heartbeat_sec_max: 120
+                      max_batch_default: 500
+                    streams:
+                      metering: all authenticated API-key SSE and WebSocket connections
+                      formula: stream_units * open_seconds / 3600
+                      enforcement_interval_seconds: 5
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns contract-level API-credit, request, stream, add-on, and response limits that clients should respect. Use this to cap page sizes, snapshot sizes, stream heartbeat settings, and stream batch sizes before starting high-volume jobs.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+components:
+  schemas:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    LimitsResponse:
+      type: object
+      required:
+      - responses
+      - sse
+      properties:
+        responses:
+          type: object
+          required:
+          - events_limit_max
+          - odds_snapshot_limit_max
+          - bets_snapshot_limit_max
+          properties:
+            events_limit_max:
+              type: integer
+              example: 1000
+            odds_snapshot_limit_max:
+              type: integer
+              example: 25000
+            bets_snapshot_limit_max:
+              type: integer
+              example: 20000
+        sse:
+          type: object
+          required:
+          - heartbeat_sec_min
+          - heartbeat_sec_max
+          - max_batch_default
+          properties:
+            heartbeat_sec_min:
+              type: integer
+              example: 5
+            heartbeat_sec_max:
+              type: integer
+              example: 120
+            max_batch_default:
+              type: integer
+              example: 500
+        streams:
+          type: object
+          additionalProperties: true
+          description: Shared stream-hour, logical-byte, and concurrent-unit rules for API-key SSE and WebSocket connections.
+        plan_id:
+          type: string
+          nullable: true
+        pricing_model:
+          type: string
+          nullable: true
+        billing_status:
+          type: string
+          nullable: true
+        quotas:
+          type: object
+          additionalProperties: true
+        entitlements:
+          type: object
+          additionalProperties: true
+        add_ons:
+          type: object
+          additionalProperties: true
+        usage_unit:
+          type: string
+          nullable: true
+          example: api_credits
+        overage_policy:
+          type: string
+          nullable: true
+          example: hard_cap
+    UsageResponse:
+      type: object
+      description: Quota and usage counters for the API key. New odds-api.net plans report API credits; legacy keys may still expose request-count fields.
+      additionalProperties: true
+      properties:
+        period_start_utc:
+          type: string
+          nullable: true
+        period_end_utc:
+          type: string
+          nullable: true
+        plan:
+          type: string
+          nullable: true
+        pricing_model:
+          type: string
+          nullable: true
+        api_credits_used:
+          type: integer
+          nullable: true
+        api_credits_limit:
+          type: integer
+          nullable: true
+        used:
+          type: integer
+          nullable: true
+        limit:
+          type: integer
+          nullable: true
+        request_count:
+          type: integer
+          nullable: true
+        request_limit:
+          type: integer
+          nullable: true
+        stream_hours_used:
+          type: number
+          format: double
+          nullable: true
+        stream_hours_limit:
+          type: integer
+          nullable: true
+        stream_logical_bytes_used:
+          type: integer
+          nullable: true
+        stream_logical_bytes_limit:
+          type: integer
+          nullable: true
+        stream_concurrent_units_used:
+          type: integer
+          nullable: true
+        stream_concurrent_units_limit:
+          type: integer
+          nullable: true
+    ApiIdentityResponse:
+      type: object
+      description: Authenticated API identity and enabled product capabilities.
+      additionalProperties: true
+      properties:
+        method:
+          type: string
+          example: api_key
+        client_id:
+          type: string
+          nullable: true
+        capabilities:
+          type: object
+          additionalProperties: true
+        membership_tier:
+          type: integer
+          nullable: true
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

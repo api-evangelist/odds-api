@@ -20,7 +20,7 @@ tags:
   - WebSocket
   - OpenAPI
   - MCP
-  - agent-native
+  - Agent-Native
   - llms-txt
   - SDK
   - Postman
@@ -42,99 +42,631 @@ tags_raw:
   - SDK
   - Postman
 apis:
-  - name: Odds API REST
-    description: >-
-      REST API for sports and racing betting odds with SSE and WebSocket streaming, arbitrage, positive EV, line
-      movement, bookmaker comparison, and results. API-key auth via X-API-Key.
-    humanURL: https://odds-api.net/docs
-    baseURL: https://api.odds-api.net/v1
-    tags:
-      - Sports
-      - Sports Betting
-      - betting-odds
-      - bookmaker-odds
-      - live-odds
-      - Sportsbook
-      - Racing
-      - REST
-      - Server-Sent Events
-      - WebSocket
-      - OpenAPI
-      - MCP
-      - agent-native
-      - llms-txt
-      - SDK
-      - Postman
-    tags_raw:
-      - sports
-      - sports-betting
-      - betting-odds
-      - bookmaker-odds
-      - live-odds
-      - sportsbook
-      - racing
-      - REST
-      - Server-Sent-Events
-      - WebSocket
-      - OpenAPI
-      - MCP
-      - agent-native
-      - llms-txt
-      - SDK
-      - Postman
-    properties:
-      - type: OpenAPI
-        url: openapi/odds-api-openapi.json
-      - type: OpenAPI
-        name: Odds API OpenAPI (provider-hosted)
-        url: https://api.odds-api.net/v1/openapi.json
-      - type: OpenAPI
-        name: Odds API OpenAPI (GitHub)
-        url: https://github.com/odds-api/odds-api/blob/main/openapi.yaml
-      - type: PostmanCollection
-        url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
-      - type: Documentation
-        url: https://odds-api.net/docs
-      - type: Documentation
-        url: https://api.odds-api.net/v1/reference
-      - type: LLMsTxt
-        url: https://odds-api.net/llms.txt
-      - type: AgentSkill
-        url: https://github.com/odds-api/odds-api/blob/main/AGENTS.md
-      - type: Overlay
-        url: overlays/odds-api-overlay.yaml
-      - type: MCPServer
-        url: mcp/odds-api-mcp.yml
-      - type: ToolCrosswalk
-        url: mcp/odds-api-tool-crosswalk.yml
-      - type: SDKs
-        url: packages/odds-api-packages.yml
-      - type: Packages
-        url: packages/odds-api-packages.yml
-      - type: ErrorCatalog
-        url: errors/odds-api-problem-types.yml
-      - type: Conventions
-        url: conventions/odds-api-conventions.yml
-      - type: DataModel
-        url: data-model/odds-api-data-model.yml
-      - type: Sandbox
-        url: sandbox/odds-api-sandbox.yml
-      - type: Plans
-        url: plans/odds-api-plans-pricing.yml
-      - type: RateLimits
-        url: rate-limits/odds-api-rate-limits.yml
-      - type: Conformance
-        url: conformance/odds-api-conformance.yml
-      - type: Lifecycle
-        url: lifecycle/odds-api-lifecycle.yml
-      - type: StatusPage
-        url: https://odds-api.net/sla-status-support
-      - type: APIReference
-        url: https://api.odds-api.net/v1/reference
-      - type: Pricing
-        url: https://odds-api.net/pricing
-      - type: SignUp
-        url: https://odds-api.net/signup
+- aid: odds-api:odds-api-account-api
+  name: Odds API Account API
+  description: Current API identity, usage counters, and contract limits.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Account
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-account-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-betting-opportunities-api
+  name: Odds API Betting opportunities API
+  description: Positive EV, arbitrage, middle, and bonus-bet opportunity feeds.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Betting opportunities
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-betting-opportunities-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-catalog-api
+  name: Odds API Catalog API
+  description: Supported sports, leagues, bookmakers, and approximate market coverage.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Catalog
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-catalog-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-prediction-markets-api
+  name: Odds API Prediction markets API
+  description: >-
+    Event-linked prediction-market order books with probability ladders, liquidity, and live updates.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Prediction markets
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-prediction-markets-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-racing-events-api
+  name: Odds API Racing events API
+  description: Racing event discovery and live racing event updates.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Racing events
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-racing-events-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-racing-odds-api
+  name: Odds API Racing odds API
+  description: Racing odds snapshots, home racing feeds, Server-Sent Events, and WebSocket updates.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Racing odds
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-racing-odds-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-results-api
+  name: Odds API Results API
+  description: Sports event result lookup.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Results
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-results-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-sports-events-api
+  name: Odds API Sports events API
+  description: Upcoming and live sports events plus event metadata.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Sports events
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-sports-events-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-sports-exchange-api
+  name: Odds API Sports exchange API
+  description: Sports betting exchange order books with back/lay ladders, liquidity, and live updates.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Sports exchange
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-sports-exchange-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-sports-odds-api
+  name: Odds API Sports odds API
+  description: Sports odds snapshots, line movement, Server-Sent Events, and WebSocket updates.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Sports odds
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-sports-odds-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-start-here-api
+  name: Odds API Start here API
+  description: API identity, base URL, authentication, and reference links.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Start here
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-start-here-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-status-api
+  name: Odds API Status API
+  description: Buyer-facing API availability, latency, stream health, and rate-limit health.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Status
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-status-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
+- aid: odds-api:odds-api-widgets-api
+  name: Odds API Widgets API
+  description: Public-safe embeddable widget feeds for approved API clients.
+  humanURL: https://odds-api.net/docs
+  baseURL: https://api.odds-api.net/v1
+  tags:
+  - Widgets
+  properties:
+  - type: OpenAPI
+    url: openapi/odds-api-widgets-api-openapi.yml
+  - type: PostmanCollection
+    url: https://github.com/odds-api/odds-api/blob/main/postman/odds-api.postman_collection.json
+  - type: Documentation
+    url: https://odds-api.net/docs
+  - type: Documentation
+    url: https://api.odds-api.net/v1/reference
+  - type: LLMsTxt
+    url: https://odds-api.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/odds-api-tool-crosswalk.yml
+  - type: SDKs
+    url: packages/odds-api-packages.yml
+  - type: Packages
+    url: packages/odds-api-packages.yml
+  - type: ErrorCatalog
+    url: errors/odds-api-problem-types.yml
+  - type: Conventions
+    url: conventions/odds-api-conventions.yml
+  - type: DataModel
+    url: data-model/odds-api-data-model.yml
+  - type: Sandbox
+    url: sandbox/odds-api-sandbox.yml
+  - type: Plans
+    url: plans/odds-api-plans-pricing.yml
+  - type: RateLimits
+    url: rate-limits/odds-api-rate-limits.yml
+  - type: Conformance
+    url: conformance/odds-api-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/odds-api-lifecycle.yml
+  - type: StatusPage
+    url: https://odds-api.net/sla-status-support
+  - type: APIReference
+    url: https://api.odds-api.net/v1/reference
+  - type: Pricing
+    url: https://odds-api.net/pricing
+  - type: SignUp
+    url: https://odds-api.net/signup
 maintainers:
   - FN: Odds API
     email: support@odds-api.net
@@ -146,6 +678,12 @@ generated:
   confidence: 95
   at: '2026-09-17T03:58:31.951Z'
 common:
+- type: AgentSkill
+  url: https://github.com/odds-api/odds-api/blob/main/AGENTS.md
+- type: Overlay
+  url: overlays/odds-api-overlay.yaml
+- type: MCPServer
+  url: mcp/odds-api-mcp.yml
 - type: VulnerabilityDisclosure
   url: security/odds-api-vulnerability-disclosure.yml
 - type: DomainSecurity

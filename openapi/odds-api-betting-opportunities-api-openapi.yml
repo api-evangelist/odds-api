@@ -1,0 +1,903 @@
+openapi: 3.2.0
+info:
+  title: Odds Betting opportunities API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Betting opportunities
+  description: Positive EV, arbitrage, middle, and bonus-bet opportunity feeds.
+paths:
+  /bets/snapshot:
+    get:
+      tags:
+      - Betting opportunities
+      summary: 'Betting opportunities: Snapshot'
+      operationId: snapshot_bets_snapshot_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: strategies
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Comma-separated strategies or 'all'
+          default: all
+          title: Strategies
+        description: Comma-separated betting strategies or `all`.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20000
+          minimum: 1
+          default: 2000
+          title: Limit
+        description: Maximum items to return. Respect the caps returned by `/limits`.
+      - name: event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Live bet source: active, legacy, or admin-only hybrid'
+          title: Source
+        description: 'Live bet source: active, legacy, or admin-only hybrid'
+      - name: price_fields
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Price Fields
+        description: '`odds`, `odds,novig`, `odds,fair`, or `all`. Compact clients default to `odds`; existing clients default to current full pricing fields.'
+      - name: include_links
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Links
+        description: When true, include bookmaker/deep-link fields such as match links and racing links.
+      - name: include_raw_payload
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Raw Payload
+        description: When true, include raw stored payload/data objects where the endpoint exposes them.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_debug_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Debug Ids
+        description: When true, include internal/subgroup/opposing IDs useful for reconciliation.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BetsSnapshotResponse'
+              examples:
+                default:
+                  summary: 'Betting opportunities: Snapshot'
+                  value:
+                    items:
+                    - id: example-positive-ev
+                      strategy: pos_ev
+                      event_id: '3704597661'
+                      bookmaker_name: Bet365
+                      selection_key: moneyline:home
+                      odds: 2.1
+                      ev: 7.7
+                    resume: '{"pos_ev":"1760000000000-0"}'
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns current betting opportunities by strategy. Use `strategies`, `limit`, and `event_id` to keep the payload scoped to what your product needs. Poll at a bounded interval, cache the last good response, and show execution-risk language before any user-facing bet action.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /bets/stream:
+    get:
+      tags:
+      - Betting opportunities
+      summary: 'Betting opportunities: Stream (SSE)'
+      operationId: stream_bets_stream_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: strategies
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: all
+          title: Strategies
+        description: Comma-separated betting strategies or `all`.
+      - name: event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Live bet source: active, legacy, or admin-only hybrid'
+          title: Source
+        description: 'Live bet source: active, legacy, or admin-only hybrid'
+      - name: price_fields
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Price Fields
+        description: '`odds`, `odds,novig`, `odds,fair`, or `all`. Compact clients default to `odds`; existing clients default to current full pricing fields.'
+      - name: include_links
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Links
+        description: When true, include bookmaker/deep-link fields such as match links and racing links.
+      - name: include_raw_payload
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Raw Payload
+        description: When true, include raw stored payload/data objects where the endpoint exposes them.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_debug_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Debug Ids
+        description: When true, include internal/subgroup/opposing IDs useful for reconciliation.
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Resume token from /snapshot (JSON mapping strategy->id)
+          title: Since
+        description: Resume token from a previous snapshot or stream message. Pass it after reconnecting.
+      - name: catchup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Catchup
+        description: When true, return available missed stream events after `since` before waiting for new events.
+      - name: heartbeat_sec
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 120
+          minimum: 5
+          default: 15
+          title: Heartbeat Sec
+        description: Heartbeat interval in seconds for stream liveness. Valid range is 5-120.
+      responses:
+        '200':
+          description: Server-Sent Events stream. Each message has an event name and JSON data payload.
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/BetsStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Decoded delta message
+                  value:
+                    event: delta
+                    data:
+                      resume: 1760000000000-0
+                      events: []
+                heartbeat:
+                  summary: Decoded heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Decoded resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Server-Sent Events feed for betting opportunity inserts, updates, and removals. Use this for alerting instead of high-frequency snapshot polling. Source-binding response headers identify the requested logical live-bet source and per-strategy effective sources.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+      x-stream-metering:
+        stream_units: 1
+        stream_hours_formula: stream_units * open_seconds / 3600
+        logical_bytes_metered: true
+        quota_policy: hard_cap
+        applies_to: authenticated API-key connections
+  /bets/ws:
+    get:
+      operationId: websocket_bets_ws
+      parameters:
+      - name: strategies
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: all
+          title: Strategies
+        description: Comma-separated betting strategies or `all`.
+      - name: event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Live bet source: active, legacy, or admin-only hybrid'
+          title: Source
+        description: 'Live bet source: active, legacy, or admin-only hybrid'
+      - name: price_fields
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Price Fields
+        description: '`odds`, `odds,novig`, `odds,fair`, or `all`. Compact clients default to `odds`; existing clients default to current full pricing fields.'
+      - name: include_links
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Links
+        description: When true, include bookmaker/deep-link fields such as match links and racing links.
+      - name: include_raw_payload
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Raw Payload
+        description: When true, include raw stored payload/data objects where the endpoint exposes them.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_debug_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Debug Ids
+        description: When true, include internal/subgroup/opposing IDs useful for reconciliation.
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Resume token from /snapshot (JSON mapping strategy->id)
+          title: Since
+        description: Resume token from a previous snapshot or stream message. Pass it after reconnecting.
+      - name: catchup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Catchup
+        description: When true, return available missed stream events after `since` before waiting for new events.
+      - name: heartbeat_sec
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 120
+          minimum: 5
+          default: 15
+          title: Heartbeat Sec
+        description: Heartbeat interval in seconds for stream liveness. Valid range is 5-120.
+      responses:
+        '101':
+          description: WebSocket connection established. Messages are JSON objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/BetsStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Delta message
+                  value:
+                    event: delta
+                    data:
+                      resume: 1760000000000-0
+                      events: []
+                heartbeat:
+                  summary: Heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '200':
+          description: OpenAPI tooling compatibility response schema. Runtime WebSocket connections upgrade with 101.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/BetsStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Delta message
+                  value:
+                    event: delta
+                    data:
+                      resume: 1760000000000-0
+                      events: []
+                heartbeat:
+                  summary: Heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+      x-websocket: true
+      x-stream-equivalent: /bets/stream
+      tags:
+      - Betting opportunities
+      summary: 'Betting opportunities: Stream (WebSocket)'
+      description: WebSocket feed for betting opportunity inserts, updates, and removals. The accept handshake includes source-binding headers matching the SSE stream.
+      security:
+      - ApiKeyAuth: []
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+      x-stream-metering:
+        stream_units: 1
+        stream_hours_formula: stream_units * open_seconds / 3600
+        logical_bytes_metered: true
+        quota_policy: hard_cap
+        applies_to: authenticated API-key connections
+components:
+  schemas:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    BetOpportunity:
+      type: object
+      description: A normalized betting opportunity. Strategy-specific fields may be present.
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        strategy:
+          type: string
+          enum:
+          - pos_ev
+          - arbitrage
+          - middles
+          - freebets
+          - pos_ev_special
+        event_id:
+          type: string
+          nullable: true
+        bookmaker_name:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        odds:
+          type: number
+          nullable: true
+        fair_odds:
+          type: number
+          nullable: true
+        ev:
+          type: number
+          nullable: true
+        ev_multiplicative_method:
+          type: number
+          nullable: true
+        ev_additive_method:
+          type: number
+          nullable: true
+        ev_power_method:
+          type: number
+          nullable: true
+        ev_shin_method:
+          type: number
+          nullable: true
+    BetsStreamDelta:
+      type: object
+      required:
+      - strategy
+      - op
+      - id
+      properties:
+        strategy:
+          type: string
+        op:
+          type: string
+          enum:
+          - upsert
+          - delete
+        id:
+          type: string
+        doc:
+          $ref: '#/components/schemas/BetOpportunity'
+    BetsStreamEvent:
+      type: object
+      required:
+      - resume
+      - events
+      properties:
+        resume:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetsStreamDelta'
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    BetsSnapshotResponse:
+      type: object
+      required:
+      - resume
+      - items
+      properties:
+        resume:
+          type: string
+          description: JSON string mapping each requested strategy to its stream resume ID.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetOpportunity'
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

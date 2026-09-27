@@ -1,0 +1,870 @@
+openapi: 3.2.0
+info:
+  title: Odds Sports events API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Sports events
+  description: Upcoming and live sports events plus event metadata.
+paths:
+  /events:
+    get:
+      tags:
+      - Sports events
+      summary: 'Sports events: Search'
+      operationId: list_events_events_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: sport
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sport
+        description: Sport filter. Use `/sports` to discover supported values.
+      - name: league
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: League
+        description: League filter. Use `/leagues?sport=...` to discover supported values.
+      - name: start_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Unix seconds; default now.
+          title: Start From
+        description: Unix seconds lower bound for event start time. Use bounded windows in production polling.
+      - name: start_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Unix seconds; optional.
+          title: Start To
+        description: Unix seconds upper bound for event start time. Keep windows narrow for hot sync jobs.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Pagination cursor: ''start_time:event_id''.'
+          title: Cursor
+        description: Pagination cursor from the previous `next_cursor`. Keep filters identical between pages.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+        description: Maximum items to return. Respect the caps returned by `/limits`.
+      - name: include_bookmaker_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Bookmaker Ids
+        description: When true, include bookmaker-to-odds-data IDs and preview ID maps on event responses.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_opportunity_counts
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Opportunity Counts
+      - name: not_started_only
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Not Started Only
+      - name: not_started_buffer_seconds
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 120
+          title: Not Started Buffer Seconds
+      - name: event_states
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Lifecycle filter. Requesting in_play automatically applies the live lookback window.
+          title: Event States
+        description: Lifecycle filter. Requesting in_play automatically applies the live lookback window.
+      - name: live_candidates
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Include already-started events that remain candidates for live play; this is not confirmation of current play.
+          default: false
+          title: Live Candidates
+        description: Include already-started events that remain candidates for live play; this is not confirmation of current play.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+              examples:
+                default:
+                  summary: 'Sports events: Search'
+                  value:
+                    items:
+                    - event_id: '3704597661'
+                      sport: rugby-league
+                      league: NRL
+                      start_time: 1760000000
+                      home_team: Home
+                      away_team: Away
+                      bookmakers:
+                        bet365: odds-doc-id
+                    next_cursor: null
+                    count: 1
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Searches sports events by sport, league, team, time window, status, bookmaker coverage, and pagination cursor. For production polling, use bounded time windows, keep filters stable across pages, and pass `next_cursor` back as `cursor` until there is no next cursor.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /events/live:
+    get:
+      tags:
+      - Sports events
+      summary: GET events live
+      description: Public Odds API operation. Authenticate with `X-API-Key`. Check timestamps before displaying prices and handle empty, stale, or suspended markets.
+      operationId: list_live_event_candidates_events_live_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: sport
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sport
+        description: Sport filter. Use `/sports` to discover supported values.
+      - name: league
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: League
+        description: League filter. Use `/leagues?sport=...` to discover supported values.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Pagination cursor: ''start_time:event_id''.'
+          title: Cursor
+        description: Pagination cursor from the previous `next_cursor`. Keep filters identical between pages.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+        description: Maximum items to return. Respect the caps returned by `/limits`.
+      - name: include_bookmaker_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Bookmaker Ids
+        description: When true, include bookmaker-to-odds-data IDs and preview ID maps on event responses.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_opportunity_counts
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Opportunity Counts
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /events/{event_id}:
+    get:
+      tags:
+      - Sports events
+      summary: 'Sports events: Event details'
+      operationId: get_event_events__event_id__get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: include_links
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Links
+        description: When true, include bookmaker/deep-link fields such as match links and racing links.
+      - name: include_raw_payload
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Raw Payload
+        description: When true, include raw stored payload/data objects where the endpoint exposes them.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_bookmaker_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Bookmaker Ids
+        description: When true, include bookmaker-to-odds-data IDs and preview ID maps on event responses.
+      - name: include_debug_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Debug Ids
+        description: When true, include internal/subgroup/opposing IDs useful for reconciliation.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns the current event record for a canonical sports event ID.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /events/{event_id}/bookmakers:
+    get:
+      tags:
+      - Sports events
+      summary: 'Sports events: Bookmaker coverage'
+      operationId: event_bookmakers_events__event_id__bookmakers_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookmakersResponse'
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Lists bookmakers currently attached to a sports event.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+components:
+  schemas:
+    BookmakersResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        items:
+          items:
+            type: string
+          type: array
+          title: Items
+      type: object
+      required:
+      - event_id
+      - items
+      title: BookmakersResponse
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    EventDetail:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        data:
+          additionalProperties: true
+          type: object
+          title: Data
+      type: object
+      required:
+      - event_id
+      - data
+      title: EventDetail
+    EventListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/EventSummary'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - items
+      - count
+      title: EventListResponse
+    OpportunityCounts:
+      properties:
+        positive_ev:
+          type: integer
+          title: Positive Ev
+          default: 0
+        arbitrage:
+          type: integer
+          title: Arbitrage
+          default: 0
+        middle:
+          type: integer
+          title: Middle
+          default: 0
+        bonus_conversion:
+          type: integer
+          title: Bonus Conversion
+          default: 0
+      type: object
+      title: OpportunityCounts
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    EventSummary:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+          description: Canonical event identifier (game_masterID).
+        sport:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sport
+        league:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: League
+          description: League name representation.
+        start_time:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start Time
+          description: Unix seconds.
+        home_team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Home Team
+        away_team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Away Team
+        event_state:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event State
+          description: Effective lifecycle state, including inferred start_time_passed.
+        event_state_certainty:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event State Certainty
+        event_state_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Event State Source
+        state_observed_at:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: State Observed At
+          description: Unix seconds.
+        actual_started_at:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Actual Started At
+          description: Unix seconds.
+        last_live_at:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Last Live At
+          description: Unix seconds.
+        finished_at:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Finished At
+          description: Unix seconds.
+        live_candidate:
+          type: boolean
+          title: Live Candidate
+          default: false
+        event_state_stale:
+          type: boolean
+          title: Event State Stale
+          default: false
+        has_available_bets:
+          type: boolean
+          title: Has Available Bets
+          description: Whether the event currently has at least one live normalized odds line.
+          default: false
+        last_capture:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Last Capture
+          description: Unix seconds.
+        bookmakers:
+          additionalProperties:
+            anyOf:
+            - type: string
+            - type: 'null'
+          type: object
+          title: Bookmakers
+          description: Bookmaker -> odds_data_id.
+        league_image_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: League Image Url
+          description: Azure-hosted league image URL when configured for this league.
+        league_image_asset_slug:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: League Image Asset Slug
+          description: Storage slug for the configured Azure-hosted league image.
+        home_team_logo_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Home Team Logo Url
+          description: Azure-hosted home-team logo URL when matched for this event.
+        away_team_logo_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Away Team Logo Url
+          description: Azure-hosted away-team logo URL when matched for this event.
+        team_logo_manifest_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Team Logo Manifest Url
+          description: Azure-hosted per-league team-logo manifest URL when configured.
+        opportunity_counts:
+          anyOf:
+          - $ref: '#/components/schemas/OpportunityCounts'
+          - type: 'null'
+          description: Aggregate live opportunity counts when requested.
+      type: object
+      required:
+      - event_id
+      title: EventSummary
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

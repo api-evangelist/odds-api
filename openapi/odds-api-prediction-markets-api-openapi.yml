@@ -1,0 +1,1145 @@
+openapi: 3.2.0
+info:
+  title: Odds Prediction markets API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Prediction markets
+  description: Event-linked prediction-market order books with probability ladders, liquidity, and live updates.
+paths:
+  /events/{event_id}/prediction-markets/orderbook/snapshot:
+    get:
+      tags:
+      - Prediction markets
+      summary: 'Prediction-market order book: Snapshot'
+      operationId: prediction_orderbook_snapshot_events__event_id__prediction_markets_orderbook_snapshot_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: providers
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Comma-separated provider filter: kalshi, polymarket.'
+          title: Providers
+        description: 'Comma-separated prediction-market provider allow-list: `polymarket`, `kalshi`.'
+      - name: market_keys
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Market Keys
+        description: Comma-separated market key allow-list for odds filters.
+      - name: contract_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Ids
+        description: Comma-separated contract ID allow-list from a prediction-market snapshot.
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20
+          minimum: 1
+          default: 3
+          title: Depth
+        description: Number of probability price levels per bid/ask side. Use smaller values for lower latency and payload size.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_unavailable
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Unavailable
+        description: When true, include unavailable or suspended rows where the endpoint supports them.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionOrderBookSnapshotResponse'
+              examples:
+                default:
+                  summary: 'Prediction-market order book: Snapshot'
+                  value:
+                    event_id: '3704597661'
+                    as_of_ts_ms: 1760000000000
+                    ttl_seconds: 30
+                    items:
+                    - id: polymarket::nba-example::moneyline
+                      event_id: '3704597661'
+                      provider: polymarket
+                      provider_market_id: nba-example
+                      market_key: moneyline
+                      market_name: Home vs Away
+                      bet_type: moneyline
+                      period: full time
+                      home_team: Home
+                      away_team: Away
+                      status: open
+                      currency: USD
+                      size_unit: contracts
+                      total_liquidity: 4200.0
+                      fee_model: polymarket_sports_taker
+                      fee_estimated: true
+                      observed_at: '2026-08-26T08:00:00Z'
+                      contracts:
+                      - contract_id: home-contract
+                        contract_name: Home
+                        outcome: 'yes'
+                        side: home
+                        status: open
+                        probability_bids:
+                        - price: 0.51
+                          size: 120.0
+                        probability_asks:
+                        - price: 0.52
+                          size: 95.0
+                        best_bid_probability: 0.51
+                        best_bid_size: 120.0
+                        best_ask_probability: 0.52
+                        best_ask_size: 95.0
+                        gross_decimal_odds: 1.92307692
+                        fee_adjusted_decimal_odds: 1.88
+                        projection_eligible: true
+                    next_cursor: null
+                    resume: 1760000000000-0
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns Polymarket and Kalshi order books linked to one canonical WagerWise sports event. Each contract contains executable probability bid and ask ladders, top-of-book probability and size, the most recent trade probability when available, gross and estimated fee-adjusted decimal odds, liquidity metadata, and source freshness. Use `providers`, `market_keys`, and `contract_ids` to narrow the response and `depth` to bound each ladder. Market availability is curated to WagerWise's supported sports offering.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+  /events/{event_id}/prediction-markets/orderbook/stream:
+    get:
+      tags:
+      - Prediction markets
+      summary: 'Prediction-market order book: Stream (SSE)'
+      operationId: prediction_orderbook_stream_events__event_id__prediction_markets_orderbook_stream_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: providers
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Providers
+        description: 'Comma-separated prediction-market provider allow-list: `polymarket`, `kalshi`.'
+      - name: market_keys
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Market Keys
+        description: Comma-separated market key allow-list for odds filters.
+      - name: contract_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Ids
+        description: Comma-separated contract ID allow-list from a prediction-market snapshot.
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20
+          minimum: 1
+          default: 3
+          title: Depth
+        description: Number of probability price levels per bid/ask side. Use smaller values for lower latency and payload size.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_unavailable
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Unavailable
+        description: When true, include unavailable or suspended rows where the endpoint supports them.
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Since
+        description: Resume token from a previous snapshot or stream message. Pass it after reconnecting.
+      - name: catchup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Catchup
+        description: When true, return available missed stream events after `since` before waiting for new events.
+      - name: heartbeat_sec
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 120
+          minimum: 5
+          default: 15
+          title: Heartbeat Sec
+        description: Heartbeat interval in seconds for stream liveness. Valid range is 5-120.
+      - name: max_batch
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 2000
+          minimum: 1
+          default: 500
+          title: Max Batch
+        description: Maximum stream messages to read per batch. Default is 500; use smaller batches for low-latency clients.
+      responses:
+        '200':
+          description: Server-Sent Events stream. Each message has an event name and JSON data payload.
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/PredictionOrderBookStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Decoded delta message
+                  value:
+                    event: delta
+                    data:
+                      event_id: '3704597661'
+                      resume: 1760000000000-0
+                      changes: []
+                heartbeat:
+                  summary: Decoded heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Decoded resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Server-Sent Events feed for prediction-market order-book changes on one event. Read the snapshot first, then reconnect with its `resume` token as `since`. Handle `delta`, `heartbeat`, and `resync`; reload the snapshot after `resync`.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+      x-stream-metering:
+        stream_units: 1
+        stream_hours_formula: stream_units * open_seconds / 3600
+        logical_bytes_metered: true
+        quota_policy: hard_cap
+        applies_to: authenticated API-key connections
+  /events/{event_id}/prediction-markets/orderbook/ws:
+    get:
+      operationId: websocket_events_event_id_prediction_markets_orderbook_ws
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+        description: Canonical event or race identifier from an event list response.
+      - name: providers
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Providers
+        description: 'Comma-separated prediction-market provider allow-list: `polymarket`, `kalshi`.'
+      - name: market_keys
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Market Keys
+        description: Comma-separated market key allow-list for odds filters.
+      - name: contract_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Ids
+        description: Comma-separated contract ID allow-list from a prediction-market snapshot.
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20
+          minimum: 1
+          default: 3
+          title: Depth
+        description: Number of probability price levels per bid/ask side. Use smaller values for lower latency and payload size.
+      - name: include_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Source
+        description: When true, include per-line/per-bookmaker provenance and capture metadata. Top-level freshness fields are always kept.
+      - name: include_unavailable
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Include Unavailable
+        description: When true, include unavailable or suspended rows where the endpoint supports them.
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Since
+        description: Resume token from a previous snapshot or stream message. Pass it after reconnecting.
+      - name: catchup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Catchup
+        description: When true, return available missed stream events after `since` before waiting for new events.
+      - name: heartbeat_sec
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 120
+          minimum: 5
+          default: 15
+          title: Heartbeat Sec
+        description: Heartbeat interval in seconds for stream liveness. Valid range is 5-120.
+      - name: max_batch
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 2000
+          minimum: 1
+          default: 500
+          title: Max Batch
+        description: Maximum stream messages to read per batch. Default is 500; use smaller batches for low-latency clients.
+      responses:
+        '101':
+          description: WebSocket connection established. Messages are JSON objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/PredictionOrderBookStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Delta message
+                  value:
+                    event: delta
+                    data:
+                      event_id: '3704597661'
+                      resume: 1760000000000-0
+                      changes: []
+                heartbeat:
+                  summary: Heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '200':
+          description: OpenAPI tooling compatibility response schema. Runtime WebSocket connections upgrade with 101.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Decoded stream message. SSE transports this as an event line plus JSON data; WebSockets send it as JSON.
+                required:
+                - event
+                - data
+                properties:
+                  event:
+                    type: string
+                    enum:
+                    - delta
+                    - heartbeat
+                    - resync
+                  data:
+                    oneOf:
+                    - $ref: '#/components/schemas/PredictionOrderBookStreamEvent'
+                    - $ref: '#/components/schemas/StreamHeartbeat'
+                    - $ref: '#/components/schemas/StreamResyncEvent'
+              examples:
+                delta:
+                  summary: Delta message
+                  value:
+                    event: delta
+                    data:
+                      event_id: '3704597661'
+                      resume: 1760000000000-0
+                      changes: []
+                heartbeat:
+                  summary: Heartbeat message
+                  value:
+                    event: heartbeat
+                    data: {}
+                resync:
+                  summary: Resync message
+                  value:
+                    event: resync
+                    data:
+                      event_id: '3704597661'
+                      resume: null
+                      reason: trimmed
+      x-websocket: true
+      x-stream-equivalent: /events/{event_id}/prediction-markets/orderbook/stream
+      tags:
+      - Prediction markets
+      summary: 'Prediction-market order book: Stream (WebSocket)'
+      description: WebSocket feed for prediction-market order-book changes on one event. Messages mirror the prediction-market SSE stream payloads and use the same filters and resume semantics.
+      security:
+      - ApiKeyAuth: []
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+      x-stream-metering:
+        stream_units: 1
+        stream_hours_formula: stream_units * open_seconds / 3600
+        logical_bytes_metered: true
+        quota_policy: hard_cap
+        applies_to: authenticated API-key connections
+components:
+  schemas:
+    PredictionOrderBookStreamEvent:
+      properties:
+        event_id:
+          title: Event Id
+          type: string
+        resume:
+          title: Resume
+          type: string
+        changes:
+          items:
+            $ref: '#/components/schemas/PredictionOrderBookStreamDelta'
+          title: Changes
+          type: array
+      required:
+      - event_id
+      - resume
+      - changes
+      title: PredictionOrderBookStreamEvent
+      type: object
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    PredictionPriceLevel:
+      properties:
+        price:
+          type: number
+          exclusiveMaximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Price
+        size:
+          type: number
+          minimum: 0.0
+          title: Size
+      type: object
+      required:
+      - price
+      - size
+      title: PredictionPriceLevel
+    PredictionContractBook:
+      properties:
+        contract_id:
+          type: string
+          title: Contract Id
+        source_contract_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Contract Id
+        contract_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Name
+        outcome:
+          type: string
+          title: Outcome
+        side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Side
+        line:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Line
+        player_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Player Name
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        probability_bids:
+          items:
+            $ref: '#/components/schemas/PredictionPriceLevel'
+          type: array
+          title: Probability Bids
+        probability_asks:
+          items:
+            $ref: '#/components/schemas/PredictionPriceLevel'
+          type: array
+          title: Probability Asks
+        best_bid_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Bid Probability
+        best_bid_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Bid Size
+        best_ask_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Ask Probability
+        best_ask_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Ask Size
+        last_trade_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Trade Probability
+        gross_decimal_odds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Gross Decimal Odds
+        fee_adjusted_decimal_odds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fee Adjusted Decimal Odds
+        estimated_fee_per_contract:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Estimated Fee Per Contract
+        projection_eligible:
+          type: boolean
+          title: Projection Eligible
+          default: false
+      type: object
+      required:
+      - contract_id
+      - outcome
+      title: PredictionContractBook
+    PredictionOrderBookItem:
+      properties:
+        id:
+          type: string
+          title: Id
+        event_id:
+          type: string
+          title: Event Id
+        provider:
+          type: string
+          title: Provider
+        provider_event_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Event Id
+        provider_market_id:
+          type: string
+          title: Provider Market Id
+        market_key:
+          type: string
+          title: Market Key
+        market_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Market Name
+        type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Type
+        bet_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bet Type
+        period:
+          anyOf:
+          - type: integer
+          - type: string
+          title: Period
+        period_str:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Period Str
+        metric:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Metric
+        player_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Player Name
+        home_team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Home Team
+        away_team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Away Team
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        in_play:
+          type: boolean
+          title: In Play
+          default: false
+        currency:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Currency
+        size_unit:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Size Unit
+        total_volume:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Total Volume
+        total_liquidity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Total Liquidity
+        fee_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fee Model
+        fee_rate:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fee Rate
+        fee_multiplier:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fee Multiplier
+        fee_exponent:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fee Exponent
+        fee_estimated:
+          type: boolean
+          title: Fee Estimated
+          default: true
+        source_ts:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Ts
+        observed_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observed At
+        contracts:
+          items:
+            $ref: '#/components/schemas/PredictionContractBook'
+          type: array
+          title: Contracts
+      type: object
+      required:
+      - id
+      - event_id
+      - provider
+      - provider_market_id
+      - market_key
+      - period
+      title: PredictionOrderBookItem
+    PredictionOrderBookSnapshotResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: As Of Ts Ms
+        ttl_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Seconds
+        items:
+          items:
+            $ref: '#/components/schemas/PredictionOrderBookItem'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        resume:
+          type: string
+          title: Resume
+          description: Redis stream ID to resume from; pass as 'since' to /stream.
+      type: object
+      required:
+      - event_id
+      - resume
+      title: PredictionOrderBookSnapshotResponse
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    PredictionOrderBookStreamDelta:
+      properties:
+        op:
+          title: Op
+          type: string
+        orderbook:
+          $ref: '#/components/schemas/PredictionOrderBookItem'
+      required:
+      - op
+      - orderbook
+      title: PredictionOrderBookStreamDelta
+      type: object
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

@@ -1,0 +1,33 @@
+{
+  "provider": "odds-api",
+  "sources": [
+    "odds-api-openapi.json"
+  ],
+  "outputs": [
+    "odds-api-account-api-openapi.yml",
+    "odds-api-betting-opportunities-api-openapi.yml",
+    "odds-api-catalog-api-openapi.yml",
+    "odds-api-prediction-markets-api-openapi.yml",
+    "odds-api-racing-events-api-openapi.yml",
+    "odds-api-racing-odds-api-openapi.yml",
+    "odds-api-results-api-openapi.yml",
+    "odds-api-sports-events-api-openapi.yml",
+    "odds-api-sports-exchange-api-openapi.yml",
+    "odds-api-sports-odds-api-openapi.yml",
+    "odds-api-start-here-api-openapi.yml",
+    "odds-api-status-api-openapi.yml",
+    "odds-api-widgets-api-openapi.yml"
+  ],
+  "archived": [
+    "archived openapi/odds-api-openapi.json"
+  ],
+  "errors": [],
+  "warnings": [
+    "no openapi/_original/ archive: this run re-split PREVIOUSLY REFINED output, so any base URL it carries is inherited from an earlier pass rather than read from a document the provider published"
+  ],
+  "notes": [
+    "odds-api-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "apis.yml register: written (+13 apis, 13 total)"
+  ],
+  "skipped": []
+}

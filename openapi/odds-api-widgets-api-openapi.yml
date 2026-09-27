@@ -1,0 +1,355 @@
+openapi: 3.2.0
+info:
+  title: Odds Widgets API
+  description: 'The Odds API V1 provides sports and racing events, bookmaker odds, exchange and prediction-market order books,
+
+    live price updates, betting opportunity snapshots, and result lookups for production integrations.'
+  version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://odds-api.net
+  x-workflow-examples:
+  - name: positive_ev_request
+    summary: Find positive EV bets for a league.
+    steps:
+    - GET /v1/events?sport=rugby-league&league=NRL
+    - GET /v1/bets/snapshot?strategies=pos_ev
+    - Use response timestamps and stake/risk controls before showing user-facing picks.
+  - name: arbitrage_request
+    summary: Find arbitrage opportunities across allowed bookmakers.
+    steps:
+    - GET /v1/bookmakers
+    - GET /v1/bets/snapshot?strategies=arbitrage
+    - Show execution-risk caveats; never present arbitrage as guaranteed after limits, voids, or delays.
+  - name: odds_history_request
+    summary: Get line movement for a market.
+    steps:
+    - GET /v1/events/{event_id}/odds/snapshot
+    - Pick a selection_key from an odds line.
+    - GET /v1/events/{event_id}/odds/history?selection_key=...
+  - name: prediction_market_orderbook_request
+    summary: Read and follow a curated prediction-market order book.
+    steps:
+    - GET /v1/events?sport=basketball&league=NBA
+    - GET /v1/events/{event_id}/prediction-markets/orderbook/snapshot?providers=polymarket,kalshi&depth=3
+    - Connect to the matching /stream or /ws route with since=<snapshot resume>.
+  x-responsible-gambling: Do not present betting outcomes as risk-free. Always mention execution risk, stale prices, bookmaker limits, voids, delays, and jurisdictional availability in user-facing products.
+  x-production-integration:
+    recommended_flow:
+    - Authenticate backend requests with X-API-Key.
+    - Discover sports, leagues, and bookmakers before storing local filters.
+    - Page sports or racing events with limit and cursor.
+    - Fetch odds snapshots for initial state. Explicit bookmaker filters are complete in one response; otherwise follow bookmaker-complete pages until complete=true. Persist as_of_ts_ms, ttl_seconds, and resume.
+    - Use SSE or WebSocket streams for realtime updates and reconnect with since=<last_resume>.
+    - Use history endpoints for line movement and results endpoints after events finish.
+    recommended_polling_intervals:
+      catalog_metadata: 6-24h
+      sports_events: 5-15m, or 1-5m for active leagues and near-start windows
+      racing_events: 1-5m with narrow time windows
+      odds_snapshots_without_streams: 60-120s, or 15-30s for priority events with strict quota controls
+      betting_opportunity_snapshots: 30-120s depending on alert urgency
+      results_after_start: 1-5m until settled, then back off
+    stream_reconnects:
+    - Snapshot first, then connect to /stream or /ws with matching filters.
+    - Apply delta messages idempotently and persist the newest resume token.
+    - Use heartbeat messages as liveness checks.
+    - Reconnect with jittered exponential backoff and since=<last_resume>.
+    - Reload the snapshot when a resync message indicates the resume token is unavailable.
+    rate_limit_backoff:
+    - Honor Retry-After on 429 when present.
+    - Otherwise start around 2 seconds and double up to about 60 seconds with jitter.
+    - Use X-RateLimit-* response headers when present to tune callers.
+    - Use /usage to detect monthly API-credit quota exhaustion and stop retry loops.
+    cache_strategy:
+    - Cache by endpoint path, event ID, normalized filters, page cursor, and product context.
+    - Respect ttl_seconds when present and always surface as_of_ts_ms.
+    - Use streams to update hot caches and reload snapshots after resync or parse failure.
+    - Prefer stale-while-revalidate displays with a visible timestamp.
+    failure_modes:
+    - 400 invalid request shape, cursor, timestamp, or filter.
+    - 401 missing or invalid API key.
+    - 403 key lacks plan, product, bookmaker, stream, racing, or strategy access.
+    - 404 event, race, result, or selection is unavailable.
+    - 429 rate limit or monthly quota exhaustion.
+    - 5xx transient service failure; retry with backoff and keep last good cached data marked stale.
+    - Stream close or resync; reconnect with since or reload the snapshot.
+servers:
+- url: https://api.odds-api.net/v1
+  description: Production V1 base URL. Set ODDS_API_BASE_URL to override it in SDKs and examples.
+security:
+- ApiKeyAuth: []
+tags:
+- name: Widgets
+  description: Public-safe embeddable widget feeds for approved API clients.
+paths:
+  /widgets/odds-ticker:
+    get:
+      tags:
+      - Widgets
+      summary: 'Widgets: Odds ticker'
+      operationId: odds_ticker_widgets_odds_ticker_get
+      security:
+      - ApiKeyAuth: []
+      parameters:
+      - name: league
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: League
+        description: League filter. Use `/leagues?sport=...` to discover supported values.
+      - name: bookmakers
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Bookmakers
+        description: Comma-separated bookmaker allow-list. Use `/bookmakers` to discover supported keys.
+      - name: widget_id
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9_.:-]+$
+          title: Widget Id
+        description: Stable widget identifier configured on the API client record.
+      - name: markets
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Markets
+        description: Comma-separated widget market list. Supported values are moneyline, handicap, and total; aliases include h2h, 1x2, spread, and over_under.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 20
+          title: Limit
+        description: Maximum items to return. Respect the caps returned by `/limits`.
+      - name: window_hours
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 168
+          minimum: 1
+          default: 48
+          title: Window Hours
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetOddsTickerResponse'
+              examples:
+                default:
+                  summary: 'Widgets: Odds ticker'
+                  value:
+                    league: EPL
+                    widget_id: homepage-ticker
+                    last_updated: '2026-07-09T01:02:03Z'
+                    events:
+                    - league: EPL
+                      event_name: Arsenal vs Chelsea
+                      start_time: 1783558800
+                      last_updated: '2026-07-09T01:02:03Z'
+                      markets:
+                      - market: moneyline 3w
+                        bookmakers:
+                        - label: tab
+                          selections:
+                          - selection: home
+                            price: 2.2
+                          - selection: away
+                            price: 2.9
+                          - selection: draw
+                            price: 3.4
+        '400':
+          description: Invalid request parameters or body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Credentials are valid but do not allow this resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying when supplied by the limiter.
+              schema:
+                type: integer
+                minimum: 1
+            X-RateLimit-Limit:
+              description: Request bucket capacity for the active limiter bucket when supplied.
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Approximate remaining requests in the active limiter bucket when supplied.
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Bucket:
+              description: Limiter bucket name that produced the response when supplied.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+        '500':
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      description: Returns a small public-safe odds ticker payload for an embeddable website widget. The response is projected from the same Redis-backed main-line sports odds used by the API, but omits event IDs, raw payloads, source metadata, links, no-vig prices, fair odds, debug IDs, and team logo metadata. API keys marked `widgets_only=true` can access this route plus account routes only.
+      x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
+components:
+  schemas:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    WidgetOddsTickerResponse:
+      properties:
+        league:
+          type: string
+          title: League
+        widget_id:
+          type: string
+          title: Widget Id
+        last_updated:
+          type: string
+          title: Last Updated
+        events:
+          items:
+            $ref: '#/components/schemas/WidgetEvent'
+          type: array
+          title: Events
+      type: object
+      required:
+      - league
+      - widget_id
+      - last_updated
+      title: WidgetOddsTickerResponse
+    WidgetSelectionPrice:
+      properties:
+        selection:
+          type: string
+          title: Selection
+        price:
+          type: number
+          title: Price
+      type: object
+      required:
+      - selection
+      - price
+      title: WidgetSelectionPrice
+    WidgetEvent:
+      properties:
+        league:
+          type: string
+          title: League
+        event_name:
+          type: string
+          title: Event Name
+        start_time:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start Time
+        last_updated:
+          type: string
+          title: Last Updated
+        markets:
+          items:
+            $ref: '#/components/schemas/WidgetMarket'
+          type: array
+          title: Markets
+      type: object
+      required:
+      - league
+      - event_name
+      - last_updated
+      title: WidgetEvent
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    WidgetBookmakerOdds:
+      properties:
+        label:
+          type: string
+          title: Label
+        selections:
+          items:
+            $ref: '#/components/schemas/WidgetSelectionPrice'
+          type: array
+          title: Selections
+      type: object
+      required:
+      - label
+      title: WidgetBookmakerOdds
+    WidgetMarket:
+      properties:
+        market:
+          type: string
+          title: Market
+        bookmakers:
+          items:
+            $ref: '#/components/schemas/WidgetBookmakerOdds'
+          type: array
+          title: Bookmakers
+      type: object
+      required:
+      - market
+      title: WidgetMarket
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Send your API key in this header on every request.

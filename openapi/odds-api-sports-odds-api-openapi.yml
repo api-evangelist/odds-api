@@ -1551,170 +1551,6 @@ components:
       allOf:
       - $ref: '#/components/schemas/ErrorResponse'
       description: Rate-limit response. Retry after the window or reduce polling frequency.
-    OddsStreamDelta:
-      properties:
-        op:
-          title: Op
-          type: string
-        odd:
-          $ref: '#/components/schemas/OddLine'
-      required:
-      - op
-      - odd
-      title: OddsStreamDelta
-      type: object
-    OddsHistoryResponse:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        selection_key:
-          type: string
-          title: Selection Key
-        price_type:
-          type: string
-          title: Price Type
-        series:
-          items:
-            $ref: '#/components/schemas/OddsHistorySeries'
-          type: array
-          title: Series
-        meta:
-          $ref: '#/components/schemas/OddsHistoryMeta'
-      type: object
-      required:
-      - event_id
-      - selection_key
-      - price_type
-      - series
-      - meta
-      title: OddsHistoryResponse
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
-    OddsHistorySeries:
-      properties:
-        bookmaker_name:
-          type: string
-          title: Bookmaker Name
-        points:
-          items:
-            $ref: '#/components/schemas/OddsHistoryPoint'
-          type: array
-          title: Points
-      type: object
-      required:
-      - bookmaker_name
-      - points
-      title: OddsHistorySeries
-    OddsStreamEvent:
-      properties:
-        event_id:
-          title: Event Id
-          type: string
-        resume:
-          title: Resume
-          type: string
-        changes:
-          items:
-            $ref: '#/components/schemas/OddsStreamDelta'
-          title: Changes
-          type: array
-        snapshot_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          default: null
-          title: Snapshot Id
-        batch_index:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          default: null
-          title: Batch Index
-        batch_count:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          default: null
-          title: Batch Count
-      required:
-      - event_id
-      - resume
-      - changes
-      title: OddsStreamEvent
-      type: object
-    OddsHistoryMeta:
-      properties:
-        from_ts:
-          type: string
-          format: date-time
-          title: From Ts
-        to_ts:
-          type: string
-          format: date-time
-          title: To Ts
-        available_price_types:
-          items:
-            type: string
-          type: array
-          title: Available Price Types
-        source:
-          type: string
-          title: Source
-          default: unknown
-        degraded:
-          type: boolean
-          title: Degraded
-          default: false
-        degraded_reason:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Degraded Reason
-      type: object
-      required:
-      - from_ts
-      - to_ts
-      - available_price_types
-      title: OddsHistoryMeta
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
     OddsHistoryPoint:
       properties:
         tick_ts:
@@ -1767,110 +1603,114 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OddsHistoryPoint'
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
-    OddsSnapshotResponse:
+    OddsHistoryResponse:
       properties:
         event_id:
           type: string
           title: Event Id
-        as_of_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: As Of Ts Ms
-          description: Time the API accepted the latest successful snapshot or authoritative bookmaker subset.
-        snapshot_capture_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Snapshot Capture Ts Ms
-          description: Time the snapshot producer completed the latest published event capture.
-        bookmaker_as_of_ts_ms:
-          additionalProperties:
-            type: integer
-          type: object
-          title: Bookmaker As Of Ts Ms
-          description: Last API acceptance time for each bookmaker included in this response.
-        oldest_bookmaker_as_of_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Oldest Bookmaker As Of Ts Ms
-          description: Oldest acceptance time among bookmaker_as_of_ts_ms values.
-        target_refresh_interval_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Target Refresh Interval Seconds
-          description: Current scheduler target for this event; source health and runtime load can add delay.
-        ttl_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Ttl Seconds
-        items:
-          items:
-            $ref: '#/components/schemas/OddLine'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        complete:
-          type: boolean
-          title: Complete
-          description: True when there are no more bookmaker-complete pages for this request.
-          default: true
-        bookmakers_included:
-          items:
-            type: string
-          type: array
-          title: Bookmakers Included
-          description: Bookmakers whose complete matching line sets are included in this response.
-        bookmaker_counts:
-          additionalProperties:
-            type: integer
-          type: object
-          title: Bookmaker Counts
-          description: Number of returned matching lines for each included bookmaker.
-        resume:
+        selection_key:
           type: string
-          title: Resume
-          description: Opaque stream resume token; pass it as 'since' to /stream.
+          title: Selection Key
+        price_type:
+          type: string
+          title: Price Type
+        series:
+          items:
+            $ref: '#/components/schemas/OddsHistorySeries'
+          type: array
+          title: Series
+        meta:
+          $ref: '#/components/schemas/OddsHistoryMeta'
       type: object
       required:
       - event_id
-      - items
-      - resume
-      title: OddsSnapshotResponse
+      - selection_key
+      - price_type
+      - series
+      - meta
+      title: OddsHistoryResponse
+    OddsStreamDelta:
+      properties:
+        op:
+          title: Op
+          type: string
+        odd:
+          $ref: '#/components/schemas/OddLine'
+      required:
+      - op
+      - odd
+      title: OddsStreamDelta
+      type: object
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    OddsHistorySeries:
+      properties:
+        bookmaker_name:
+          type: string
+          title: Bookmaker Name
+        points:
+          items:
+            $ref: '#/components/schemas/OddsHistoryPoint'
+          type: array
+          title: Points
+      type: object
+      required:
+      - bookmaker_name
+      - points
+      title: OddsHistorySeries
+    OddsHistoryMeta:
+      properties:
+        from_ts:
+          type: string
+          format: date-time
+          title: From Ts
+        to_ts:
+          type: string
+          format: date-time
+          title: To Ts
+        available_price_types:
+          items:
+            type: string
+          type: array
+          title: Available Price Types
+        source:
+          type: string
+          title: Source
+          default: unknown
+        degraded:
+          type: boolean
+          title: Degraded
+          default: false
+        degraded_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Degraded Reason
+      type: object
+      required:
+      - from_ts
+      - to_ts
+      - available_price_types
+      title: OddsHistoryMeta
     OddLine:
       properties:
         id:
@@ -2090,6 +1930,166 @@ components:
       - market_key
       - period
       title: OddLine
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    OddsStreamEvent:
+      properties:
+        event_id:
+          title: Event Id
+          type: string
+        resume:
+          title: Resume
+          type: string
+        changes:
+          items:
+            $ref: '#/components/schemas/OddsStreamDelta'
+          title: Changes
+          type: array
+        snapshot_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Snapshot Id
+        batch_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Batch Index
+        batch_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Batch Count
+      required:
+      - event_id
+      - resume
+      - changes
+      title: OddsStreamEvent
+      type: object
+    OddsSnapshotResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: As Of Ts Ms
+          description: Time the API accepted the latest successful snapshot or authoritative bookmaker subset.
+        snapshot_capture_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Snapshot Capture Ts Ms
+          description: Time the snapshot producer completed the latest published event capture.
+        bookmaker_as_of_ts_ms:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Bookmaker As Of Ts Ms
+          description: Last API acceptance time for each bookmaker included in this response.
+        oldest_bookmaker_as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Oldest Bookmaker As Of Ts Ms
+          description: Oldest acceptance time among bookmaker_as_of_ts_ms values.
+        target_refresh_interval_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Target Refresh Interval Seconds
+          description: Current scheduler target for this event; source health and runtime load can add delay.
+        ttl_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Seconds
+        items:
+          items:
+            $ref: '#/components/schemas/OddLine'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        complete:
+          type: boolean
+          title: Complete
+          description: True when there are no more bookmaker-complete pages for this request.
+          default: true
+        bookmakers_included:
+          items:
+            type: string
+          type: array
+          title: Bookmakers Included
+          description: Bookmakers whose complete matching line sets are included in this response.
+        bookmaker_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Bookmaker Counts
+          description: Number of returned matching lines for each included bookmaker.
+        resume:
+          type: string
+          title: Resume
+          description: Opaque stream resume token; pass it as 'since' to /stream.
+      type: object
+      required:
+      - event_id
+      - items
+      - resume
+      title: OddsSnapshotResponse
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

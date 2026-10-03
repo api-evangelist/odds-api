@@ -581,10 +581,64 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
+    BookmakerCatalogItem:
+      type: object
+      required:
+      - bookmaker
+      - country_codes
+      properties:
+        bookmaker:
+          type: string
+          description: Canonical bookmaker identifier accepted by bookmaker filters.
+          example: bet365
+        country_codes:
+          type: array
+          items:
+            type: string
+          description: Country codes where this bookmaker is active, for example `AU` or `UK`.
+          example:
+          - AU
+          - UK
+        source_bookmaker:
+          type: string
+          nullable: true
+          description: Canonical source bookmaker when this bookmaker reuses another bookmaker's sports odds.
+          example: betnation
     RateLimitResponse:
       allOf:
       - $ref: '#/components/schemas/ErrorResponse'
       description: Rate-limit response. Retry after the window or reduce polling frequency.
+    BookmakerCountryCatalogItem:
+      type: object
+      required:
+      - country_code
+      - bookmakers
+      properties:
+        country_code:
+          type: string
+          example: AU
+        country:
+          type: string
+          nullable: true
+          example: Australia
+        bookmakers:
+          type: array
+          items:
+            type: string
+          description: Canonical bookmaker identifiers active for this country code.
+    CoverageSource:
+      properties:
+        markets_are_approximate:
+          type: boolean
+          title: Markets Are Approximate
+          default: true
+        lookback_days:
+          type: integer
+          title: Lookback Days
+      type: object
+      required:
+      - lookback_days
+      title: CoverageSource
     BookmakerCountriesCatalogResponse:
       type: object
       required:
@@ -594,6 +648,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BookmakerCountryCatalogItem'
+    StringListResponse:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            type: string
     CoverageBookmaker:
       properties:
         bookmaker:
@@ -608,15 +671,19 @@ components:
       required:
       - bookmaker
       title: CoverageBookmaker
-    StringListResponse:
+    CoverageLeague:
+      properties:
+        sport:
+          type: string
+          title: Sport
+        league:
+          type: string
+          title: League
       type: object
       required:
-      - items
-      properties:
-        items:
-          type: array
-          items:
-            type: string
+      - sport
+      - league
+      title: CoverageLeague
     CoverageResponse:
       properties:
         as_of:
@@ -649,25 +716,6 @@ components:
       - as_of
       - source
       title: CoverageResponse
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
     BookmakerCatalogResponse:
       type: object
       required:
@@ -677,19 +725,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BookmakerCatalogItem'
-    CoverageSource:
-      properties:
-        markets_are_approximate:
-          type: boolean
-          title: Markets Are Approximate
-          default: true
-        lookback_days:
-          type: integer
-          title: Lookback Days
-      type: object
-      required:
-      - lookback_days
-      title: CoverageSource
     CoverageMarket:
       properties:
         bookmaker:
@@ -729,60 +764,25 @@ components:
       - last_seen_at
       - sample_event_id
       title: CoverageMarket
-    BookmakerCountryCatalogItem:
+    ErrorResponse:
       type: object
       required:
-      - country_code
-      - bookmakers
+      - detail
       properties:
-        country_code:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
           type: string
-          example: AU
-        country:
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
           type: string
-          nullable: true
-          example: Australia
-        bookmakers:
-          type: array
-          items:
-            type: string
-          description: Canonical bookmaker identifiers active for this country code.
-    BookmakerCatalogItem:
-      type: object
-      required:
-      - bookmaker
-      - country_codes
-      properties:
-        bookmaker:
-          type: string
-          description: Canonical bookmaker identifier accepted by bookmaker filters.
-          example: bet365
-        country_codes:
-          type: array
-          items:
-            type: string
-          description: Country codes where this bookmaker is active, for example `AU` or `UK`.
-          example:
-          - AU
-          - UK
-        source_bookmaker:
-          type: string
-          nullable: true
-          description: Canonical source bookmaker when this bookmaker reuses another bookmaker's sports odds.
-          example: betnation
-    CoverageLeague:
-      properties:
-        sport:
-          type: string
-          title: Sport
-        league:
-          type: string
-          title: League
-      type: object
-      required:
-      - sport
-      - league
-      title: CoverageLeague
+          description: Optional request identifier for support/debugging.
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

@@ -1184,304 +1184,6 @@ paths:
         applies_to: authenticated API-key connections
 components:
   schemas:
-    ExchangeOrderBookStreamEvent:
-      properties:
-        event_id:
-          title: Event Id
-          type: string
-        resume:
-          title: Resume
-          type: string
-        changes:
-          items:
-            $ref: '#/components/schemas/ExchangeOrderBookStreamDelta'
-          title: Changes
-          type: array
-      required:
-      - event_id
-      - resume
-      - changes
-      title: ExchangeOrderBookStreamEvent
-      type: object
-    TennisScore:
-      properties:
-        sport:
-          const: tennis
-          title: Sport
-          type: string
-        provider:
-          const: betfair
-          title: Provider
-          type: string
-        home:
-          $ref: '#/components/schemas/TennisScoreParticipant'
-        away:
-          $ref: '#/components/schemas/TennisScoreParticipant'
-        current_set:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Current Set
-        current_game:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Current Game
-        match_status:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Match Status
-        tie_break:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Tie Break
-        received_at:
-          description: Odds API receipt timestamp, not source time.
-          title: Received At
-          type: string
-        source_timestamp:
-          default: null
-          title: Source Timestamp
-          type: 'null'
-        source_timestamp_available:
-          const: false
-          default: false
-          title: Source Timestamp Available
-          type: boolean
-      required:
-      - sport
-      - provider
-      - home
-      - away
-      - current_set
-      - current_game
-      - match_status
-      - tie_break
-      - received_at
-      title: TennisScore
-      type: object
-    ExchangeOrderBookSnapshotResponse:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        as_of_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: As Of Ts Ms
-        ttl_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Ttl Seconds
-        items:
-          items:
-            $ref: '#/components/schemas/ExchangeOrderBookItem'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        resume:
-          type: string
-          title: Resume
-          description: Redis stream ID to resume from; pass as 'since' to /stream.
-        refresh_state:
-          type: string
-          title: Refresh State
-          default: not_requested
-        fresh_count:
-          type: integer
-          title: Fresh Count
-          default: 0
-        stale_count:
-          type: integer
-          title: Stale Count
-          default: 0
-        warming_count:
-          type: integer
-          title: Warming Count
-          default: 0
-      type: object
-      required:
-      - event_id
-      - resume
-      title: ExchangeOrderBookSnapshotResponse
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    InPlayExchangeWebSocketMessage:
-      type: object
-      description: Multiplexed in-play exchange WebSocket message.
-      required:
-      - type
-      additionalProperties: true
-      properties:
-        type:
-          type: string
-          enum:
-          - subscribed
-          - unsubscribed
-          - image
-          - delta
-          - heartbeat
-          - pong
-          - error
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        market_ids:
-          type: array
-          items:
-            type: string
-        changes:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-    ExchangeMarketRunner:
-      properties:
-        selection_id:
-          type: string
-          title: Selection Id
-        name:
-          type: string
-          title: Name
-        handicap:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Handicap
-        sort_priority:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Sort Priority
-      type: object
-      required:
-      - selection_id
-      - name
-      title: ExchangeMarketRunner
-    TennisScoreMessage:
-      properties:
-        type:
-          enum:
-          - image
-          - delta
-          title: Type
-          type: string
-        event_id:
-          title: Event Id
-          type: string
-        stream_id:
-          description: Process-session ID that scopes sequence values.
-          pattern: ^[0-9a-f]{32}$
-          title: Stream Id
-          type: string
-        sequence:
-          description: Monotonic semantic revision within one stream_id.
-          minimum: 1
-          title: Sequence
-          type: integer
-        update_kind:
-          description: How this complete replacement relates to the last state delivered on this connection.
-          enum:
-          - initial
-          - advance
-          - correction
-          - reaffirmation
-          - reset
-          title: Update Kind
-          type: string
-        score:
-          $ref: '#/components/schemas/TennisScore'
-        freshness:
-          $ref: '#/components/schemas/TennisScoreFreshness'
-      required:
-      - type
-      - event_id
-      - stream_id
-      - sequence
-      - update_kind
-      - score
-      - freshness
-      title: TennisScoreMessage
-      type: object
-    ExchangeOrderBookStreamDelta:
-      properties:
-        op:
-          title: Op
-          type: string
-        orderbook:
-          $ref: '#/components/schemas/ExchangeOrderBookItem'
-      required:
-      - op
-      - orderbook
-      title: ExchangeOrderBookStreamDelta
-      type: object
-    ExchangeMarketSubscription:
-      properties:
-        websocket_url:
-          type: string
-          title: Websocket Url
-        command:
-          additionalProperties: true
-          type: object
-          title: Command
-        max_markets_per_connection:
-          type: integer
-          title: Max Markets Per Connection
-      type: object
-      required:
-      - websocket_url
-      - command
-      - max_markets_per_connection
-      title: ExchangeMarketSubscription
-    ExchangeMarketsResponse:
-      properties:
-        score_subscription:
-          anyOf:
-          - $ref: '#/components/schemas/TennisScoreSubscription'
-          - type: 'null'
-        event_id:
-          type: string
-          title: Event Id
-        exchange:
-          type: string
-          title: Exchange
-        count:
-          type: integer
-          title: Count
-        available_market_types:
-          items:
-            type: string
-          type: array
-          title: Available Market Types
-        markets:
-          items:
-            $ref: '#/components/schemas/ExchangeMarket'
-          type: array
-          title: Markets
-        subscription:
-          $ref: '#/components/schemas/ExchangeMarketSubscription'
-      type: object
-      required:
-      - event_id
-      - exchange
-      - count
-      - available_market_types
-      - markets
-      - subscription
-      title: ExchangeMarketsResponse
     ExchangeOrderBookItem:
       properties:
         id:
@@ -1668,6 +1370,250 @@ components:
       - market_key
       - period
       title: ExchangeOrderBookItem
+    ExchangePriceLevel:
+      properties:
+        price:
+          type: number
+          title: Price
+        size:
+          type: number
+          title: Size
+      type: object
+      required:
+      - price
+      - size
+      title: ExchangePriceLevel
+    TennisScoreMessage:
+      properties:
+        type:
+          enum:
+          - image
+          - delta
+          title: Type
+          type: string
+        event_id:
+          title: Event Id
+          type: string
+        stream_id:
+          description: Process-session ID that scopes sequence values.
+          pattern: ^[0-9a-f]{32}$
+          title: Stream Id
+          type: string
+        sequence:
+          description: Monotonic semantic revision within one stream_id.
+          minimum: 1
+          title: Sequence
+          type: integer
+        update_kind:
+          description: How this complete replacement relates to the last state delivered on this connection.
+          enum:
+          - initial
+          - advance
+          - correction
+          - reaffirmation
+          - reset
+          title: Update Kind
+          type: string
+        score:
+          $ref: '#/components/schemas/TennisScore'
+        freshness:
+          $ref: '#/components/schemas/TennisScoreFreshness'
+      required:
+      - type
+      - event_id
+      - stream_id
+      - sequence
+      - update_kind
+      - score
+      - freshness
+      title: TennisScoreMessage
+      type: object
+    TennisScoreSubscription:
+      properties:
+        websocket_url:
+          type: string
+          title: Websocket Url
+        command:
+          additionalProperties: true
+          type: object
+          title: Command
+        max_events_per_connection:
+          type: integer
+          title: Max Events Per Connection
+      type: object
+      required:
+      - websocket_url
+      - command
+      - max_events_per_connection
+      title: TennisScoreSubscription
+    TennisScore:
+      properties:
+        sport:
+          const: tennis
+          title: Sport
+          type: string
+        provider:
+          const: betfair
+          title: Provider
+          type: string
+        home:
+          $ref: '#/components/schemas/TennisScoreParticipant'
+        away:
+          $ref: '#/components/schemas/TennisScoreParticipant'
+        current_set:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Current Set
+        current_game:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Current Game
+        match_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Match Status
+        tie_break:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Tie Break
+        received_at:
+          description: Odds API receipt timestamp, not source time.
+          title: Received At
+          type: string
+        source_timestamp:
+          default: null
+          title: Source Timestamp
+          type: 'null'
+        source_timestamp_available:
+          const: false
+          default: false
+          title: Source Timestamp Available
+          type: boolean
+      required:
+      - sport
+      - provider
+      - home
+      - away
+      - current_set
+      - current_game
+      - match_status
+      - tie_break
+      - received_at
+      title: TennisScore
+      type: object
+    ExchangeOrderBookSnapshotResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: As Of Ts Ms
+        ttl_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Seconds
+        items:
+          items:
+            $ref: '#/components/schemas/ExchangeOrderBookItem'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        resume:
+          type: string
+          title: Resume
+          description: Redis stream ID to resume from; pass as 'since' to /stream.
+        refresh_state:
+          type: string
+          title: Refresh State
+          default: not_requested
+        fresh_count:
+          type: integer
+          title: Fresh Count
+          default: 0
+        stale_count:
+          type: integer
+          title: Stale Count
+          default: 0
+        warming_count:
+          type: integer
+          title: Warming Count
+          default: 0
+      type: object
+      required:
+      - event_id
+      - resume
+      title: ExchangeOrderBookSnapshotResponse
+    ExchangeMarketRunner:
+      properties:
+        selection_id:
+          type: string
+          title: Selection Id
+        name:
+          type: string
+          title: Name
+        handicap:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Handicap
+        sort_priority:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Sort Priority
+      type: object
+      required:
+      - selection_id
+      - name
+      title: ExchangeMarketRunner
+    ExchangeMarketsResponse:
+      properties:
+        score_subscription:
+          anyOf:
+          - $ref: '#/components/schemas/TennisScoreSubscription'
+          - type: 'null'
+        event_id:
+          type: string
+          title: Event Id
+        exchange:
+          type: string
+          title: Exchange
+        count:
+          type: integer
+          title: Count
+        available_market_types:
+          items:
+            type: string
+          type: array
+          title: Available Market Types
+        markets:
+          items:
+            $ref: '#/components/schemas/ExchangeMarket'
+          type: array
+          title: Markets
+        subscription:
+          $ref: '#/components/schemas/ExchangeMarketSubscription'
+      type: object
+      required:
+      - event_id
+      - exchange
+      - count
+      - available_market_types
+      - markets
+      - subscription
+      title: ExchangeMarketsResponse
     ErrorResponse:
       type: object
       required:
@@ -1687,19 +1633,283 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
-    ExchangePriceLevel:
+    TennisScoreFreshness:
       properties:
-        price:
-          type: number
-          title: Price
-        size:
-          type: number
-          title: Size
+        state:
+          enum:
+          - live
+          - stale
+          title: State
+          type: string
+        age_ms:
+          title: Age Ms
+          type: integer
+        poll_interval_ms:
+          title: Poll Interval Ms
+          type: integer
+      required:
+      - state
+      - age_ms
+      - poll_interval_ms
+      title: TennisScoreFreshness
+      type: object
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    ExchangeOrderBookStreamDelta:
+      properties:
+        op:
+          title: Op
+          type: string
+        orderbook:
+          $ref: '#/components/schemas/ExchangeOrderBookItem'
+      required:
+      - op
+      - orderbook
+      title: ExchangeOrderBookStreamDelta
+      type: object
+    TennisScoreParticipant:
+      properties:
+        name:
+          title: Name
+          type: string
+        sets:
+          minimum: 0
+          title: Sets
+          type: integer
+        games:
+          minimum: 0
+          title: Games
+          type: integer
+        points:
+          title: Points
+          type: string
+        is_serving:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Serving
+        game_sequence:
+          items:
+            type: integer
+          title: Game Sequence
+          type: array
+      required:
+      - name
+      - sets
+      - games
+      - points
+      - is_serving
+      - game_sequence
+      title: TennisScoreParticipant
+      type: object
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    ExchangeSelectionBook:
+      properties:
+        selection_key:
+          type: string
+          title: Selection Key
+        exchange_selection_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Exchange Selection Id
+        selection_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Selection Name
+        handicap:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Handicap
+        side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Side
+        line:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Line
+        player_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Player Name
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        last_traded_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Traded Price
+        traded_volume:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Traded Volume
+        traded_volume_by_price:
+          items:
+            $ref: '#/components/schemas/ExchangePriceLevel'
+          type: array
+          title: Traded Volume By Price
+        available_to_back:
+          items:
+            $ref: '#/components/schemas/ExchangePriceLevel'
+          type: array
+          title: Available To Back
+        available_to_lay:
+          items:
+            $ref: '#/components/schemas/ExchangePriceLevel'
+          type: array
+          title: Available To Lay
+        best_back_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Back Price
+        best_back_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Back Size
+        best_lay_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Lay Price
+        best_lay_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Lay Size
       type: object
       required:
-      - price
-      - size
-      title: ExchangePriceLevel
+      - selection_key
+      title: ExchangeSelectionBook
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    ExchangeMarketSubscription:
+      properties:
+        websocket_url:
+          type: string
+          title: Websocket Url
+        command:
+          additionalProperties: true
+          type: object
+          title: Command
+        max_markets_per_connection:
+          type: integer
+          title: Max Markets Per Connection
+      type: object
+      required:
+      - websocket_url
+      - command
+      - max_markets_per_connection
+      title: ExchangeMarketSubscription
+    ExchangeOrderBookStreamEvent:
+      properties:
+        event_id:
+          title: Event Id
+          type: string
+        resume:
+          title: Resume
+          type: string
+        changes:
+          items:
+            $ref: '#/components/schemas/ExchangeOrderBookStreamDelta'
+          title: Changes
+          type: array
+      required:
+      - event_id
+      - resume
+      - changes
+      title: ExchangeOrderBookStreamEvent
+      type: object
+    InPlayExchangeWebSocketMessage:
+      type: object
+      description: Multiplexed in-play exchange WebSocket message.
+      required:
+      - type
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          enum:
+          - subscribed
+          - unsubscribed
+          - image
+          - delta
+          - heartbeat
+          - pong
+          - error
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        market_ids:
+          type: array
+          items:
+            type: string
+        changes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
     ExchangeMarket:
       properties:
         market_id:
@@ -1798,216 +2008,6 @@ components:
       - in_play_supported
       - ladder_depth_max
       title: ExchangeMarket
-    TennisScoreSubscription:
-      properties:
-        websocket_url:
-          type: string
-          title: Websocket Url
-        command:
-          additionalProperties: true
-          type: object
-          title: Command
-        max_events_per_connection:
-          type: integer
-          title: Max Events Per Connection
-      type: object
-      required:
-      - websocket_url
-      - command
-      - max_events_per_connection
-      title: TennisScoreSubscription
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
-    TennisScoreFreshness:
-      properties:
-        state:
-          enum:
-          - live
-          - stale
-          title: State
-          type: string
-        age_ms:
-          title: Age Ms
-          type: integer
-        poll_interval_ms:
-          title: Poll Interval Ms
-          type: integer
-      required:
-      - state
-      - age_ms
-      - poll_interval_ms
-      title: TennisScoreFreshness
-      type: object
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
-    TennisScoreParticipant:
-      properties:
-        name:
-          title: Name
-          type: string
-        sets:
-          minimum: 0
-          title: Sets
-          type: integer
-        games:
-          minimum: 0
-          title: Games
-          type: integer
-        points:
-          title: Points
-          type: string
-        is_serving:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Is Serving
-        game_sequence:
-          items:
-            type: integer
-          title: Game Sequence
-          type: array
-      required:
-      - name
-      - sets
-      - games
-      - points
-      - is_serving
-      - game_sequence
-      title: TennisScoreParticipant
-      type: object
-    ExchangeSelectionBook:
-      properties:
-        selection_key:
-          type: string
-          title: Selection Key
-        exchange_selection_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Exchange Selection Id
-        selection_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Selection Name
-        handicap:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Handicap
-        side:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Side
-        line:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Line
-        player_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Player Name
-        status:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-        last_traded_price:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Last Traded Price
-        traded_volume:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Traded Volume
-        traded_volume_by_price:
-          items:
-            $ref: '#/components/schemas/ExchangePriceLevel'
-          type: array
-          title: Traded Volume By Price
-        available_to_back:
-          items:
-            $ref: '#/components/schemas/ExchangePriceLevel'
-          type: array
-          title: Available To Back
-        available_to_lay:
-          items:
-            $ref: '#/components/schemas/ExchangePriceLevel'
-          type: array
-          title: Available To Lay
-        best_back_price:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Back Price
-        best_back_size:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Back Size
-        best_lay_price:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Lay Price
-        best_lay_size:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Lay Size
-      type: object
-      required:
-      - selection_key
-      title: ExchangeSelectionBook
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

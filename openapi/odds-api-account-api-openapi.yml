@@ -336,10 +336,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     LimitsResponse:
       type: object
       required:
@@ -408,6 +404,27 @@ components:
           type: string
           nullable: true
           example: hard_cap
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    ApiIdentityResponse:
+      type: object
+      description: Authenticated API identity and enabled product capabilities.
+      additionalProperties: true
+      properties:
+        method:
+          type: string
+          example: api_key
+        client_id:
+          type: string
+          nullable: true
+        capabilities:
+          type: object
+          additionalProperties: true
+        membership_tier:
+          type: integer
+          nullable: true
     UsageResponse:
       type: object
       description: Quota and usage counters for the API key. New odds-api.net plans report API credits; legacy keys may still expose request-count fields.
@@ -460,23 +477,6 @@ components:
           type: integer
           nullable: true
         stream_concurrent_units_limit:
-          type: integer
-          nullable: true
-    ApiIdentityResponse:
-      type: object
-      description: Authenticated API identity and enabled product capabilities.
-      additionalProperties: true
-      properties:
-        method:
-          type: string
-          example: api_key
-        client_id:
-          type: string
-          nullable: true
-        capabilities:
-          type: object
-          additionalProperties: true
-        membership_tier:
           type: integer
           nullable: true
     ErrorResponse:

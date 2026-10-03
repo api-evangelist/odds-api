@@ -1,7 +1,7 @@
 {
   "provider": "odds-api",
   "sources": [
-    "odds-api-openapi.json"
+    "_original/odds-api-openapi.json"
   ],
   "outputs": [
     "odds-api-account-api-openapi.yml",
@@ -18,16 +18,27 @@
     "odds-api-status-api-openapi.yml",
     "odds-api-widgets-api-openapi.yml"
   ],
-  "archived": [
-    "archived openapi/odds-api-openapi.json"
-  ],
+  "archived": [],
   "errors": [],
-  "warnings": [
-    "no openapi/_original/ archive: this run re-split PREVIOUSLY REFINED output, so any base URL it carries is inherited from an earlier pass rather than read from a document the provider published"
-  ],
+  "warnings": [],
   "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
     "odds-api-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
-    "apis.yml register: written (+13 apis, 13 total)"
+    "apis.yml register: already-registered"
   ],
-  "skipped": []
+  "skipped": [
+    "odds-api-account-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-betting-opportunities-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-catalog-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-prediction-markets-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-racing-events-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-racing-odds-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-results-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-sports-events-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-sports-exchange-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-sports-odds-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-start-here-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-status-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "odds-api-widgets-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
 }

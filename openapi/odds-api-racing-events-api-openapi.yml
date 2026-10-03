@@ -789,6 +789,29 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     RacingEventSummary:
       properties:
         event_id:
@@ -891,25 +914,18 @@ components:
       required:
       - event_id
       title: RacingEventSummary
-    RacingEventListResponse:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/RacingEventSummary'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        count:
-          type: integer
-          title: Count
+    RacingEventsStreamEvent:
       type: object
       required:
-      - count
-      title: RacingEventListResponse
+      - resume
+      - changes
+      properties:
+        resume:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RacingEventsStreamChange'
     StreamResyncEvent:
       type: object
       description: Sent when a resume token is no longer available and the client should reload the snapshot.
@@ -931,41 +947,23 @@ components:
         snapshot_id:
           type: string
           nullable: true
-    RacingEventsStreamEvent:
+    RacingEventsStreamChange:
       type: object
       required:
-      - resume
-      - changes
+      - op
+      - event_id
       properties:
-        resume:
+        op:
           type: string
-        changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/RacingEventsStreamChange'
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
+          enum:
+          - upsert
+          - remove
+        event_id:
           type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
+        event:
+          type: object
+          nullable: true
+          additionalProperties: true
     StreamHeartbeat:
       type: object
       description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
@@ -993,23 +991,6 @@ components:
         target_refresh_interval_seconds:
           type: integer
           nullable: true
-    RacingEventsStreamChange:
-      type: object
-      required:
-      - op
-      - event_id
-      properties:
-        op:
-          type: string
-          enum:
-          - upsert
-          - remove
-        event_id:
-          type: string
-        event:
-          type: object
-          nullable: true
-          additionalProperties: true
     RacingEventDetail:
       properties:
         event_id:
@@ -1024,6 +1005,25 @@ components:
       - event_id
       - data
       title: RacingEventDetail
+    RacingEventListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/RacingEventSummary'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - count
+      title: RacingEventListResponse
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

@@ -715,112 +715,6 @@ paths:
         applies_to: authenticated API-key connections
 components:
   schemas:
-    RacingOddsStreamDelta:
-      properties:
-        op:
-          title: Op
-          type: string
-        bookmaker_name:
-          title: Bookmaker Name
-          type: string
-        snapshot:
-          anyOf:
-          - $ref: '#/components/schemas/RacingOddsBookmakerSnapshot'
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          default: null
-          description: 'Compact clients receive the documented bookmaker snapshot with runners and optional bookmaker_link. Non-compact clients with include_raw_payload=true receive a bookmaker-specific raw object directly here (Sportsbet: snapshot.horse_data[].odds and snapshot.raceID), without a payload wrapper. Absent for removals.'
-          title: Snapshot
-      required:
-      - op
-      - bookmaker_name
-      title: RacingOddsStreamDelta
-      type: object
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
-    RacingOddsSnapshotResponse:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        as_of_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: As Of Ts Ms
-        ttl_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Ttl Seconds
-        active_runners:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Active Runners
-        total_runners:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Total Runners
-        scratched_runners:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Scratched Runners
-        runner_count_source:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Runner Count Source
-        runner_count_updated_at_ts:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Runner Count Updated At Ts
-        runner_count_complete:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Runner Count Complete
-        items:
-          items:
-            $ref: '#/components/schemas/RacingOddsBookmakerSnapshot'
-          type: array
-          title: Items
-        resume:
-          type: string
-          title: Resume
-          description: Redis stream ID to resume from; pass as 'since' to /stream.
-      type: object
-      required:
-      - event_id
-      - resume
-      title: RacingOddsSnapshotResponse
     RacingOddsStreamEvent:
       properties:
         event_id:
@@ -840,52 +734,6 @@ components:
       - changes
       title: RacingOddsStreamEvent
       type: object
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
     RacingOddsBookmakerSnapshot:
       properties:
         bookmaker_name:
@@ -1009,6 +857,158 @@ components:
       - bookmaker_name
       - race_id
       title: RacingOddsBookmakerSnapshot
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    RacingOddsStreamDelta:
+      properties:
+        op:
+          title: Op
+          type: string
+        bookmaker_name:
+          title: Bookmaker Name
+          type: string
+        snapshot:
+          anyOf:
+          - $ref: '#/components/schemas/RacingOddsBookmakerSnapshot'
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          default: null
+          description: 'Compact clients receive the documented bookmaker snapshot with runners and optional bookmaker_link. Non-compact clients with include_raw_payload=true receive a bookmaker-specific raw object directly here (Sportsbet: snapshot.horse_data[].odds and snapshot.raceID), without a payload wrapper. Absent for removals.'
+          title: Snapshot
+      required:
+      - op
+      - bookmaker_name
+      title: RacingOddsStreamDelta
+      type: object
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    RacingOddsSnapshotResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: As Of Ts Ms
+        ttl_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Seconds
+        active_runners:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Active Runners
+        total_runners:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total Runners
+        scratched_runners:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Scratched Runners
+        runner_count_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Runner Count Source
+        runner_count_updated_at_ts:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Runner Count Updated At Ts
+        runner_count_complete:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Runner Count Complete
+        items:
+          items:
+            $ref: '#/components/schemas/RacingOddsBookmakerSnapshot'
+          type: array
+          title: Items
+        resume:
+          type: string
+          title: Resume
+          description: Redis stream ID to resume from; pass as 'since' to /stream.
+      type: object
+      required:
+      - event_id
+      - resume
+      title: RacingOddsSnapshotResponse
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

@@ -193,6 +193,8 @@ apis:
   humanURL: https://odds-api.net/docs
   baseURL: https://api.odds-api.net/v1
   tags:
+  - Prediction Markets
+  tags_raw:
   - Prediction markets
   properties:
   - type: OpenAPI
@@ -481,6 +483,8 @@ apis:
   humanURL: https://odds-api.net/docs
   baseURL: https://api.odds-api.net/v1
   tags:
+  - Sports Odds
+  tags_raw:
   - Sports odds
   properties:
   - type: OpenAPI

@@ -789,29 +789,63 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    ErrorResponse:
+    StreamHeartbeat:
       type: object
-      required:
-      - detail
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
       properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
+        event_id:
           type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
+          nullable: true
+        resume:
           type: string
-          description: Optional request identifier for support/debugging.
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
     RateLimitResponse:
       allOf:
       - $ref: '#/components/schemas/ErrorResponse'
       description: Rate-limit response. Retry after the window or reduce polling frequency.
+    RacingEventsStreamEvent:
+      type: object
+      required:
+      - resume
+      - changes
+      properties:
+        resume:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RacingEventsStreamChange'
+    RacingEventDetail:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        data:
+          additionalProperties: true
+          type: object
+          title: Data
+      type: object
+      required:
+      - event_id
+      - data
+      title: RacingEventDetail
     RacingEventSummary:
       properties:
         event_id:
@@ -914,18 +948,44 @@ components:
       required:
       - event_id
       title: RacingEventSummary
-    RacingEventsStreamEvent:
+    ErrorResponse:
       type: object
       required:
-      - resume
-      - changes
+      - detail
       properties:
-        resume:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
           type: string
-        changes:
-          type: array
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    RacingEventListResponse:
+      properties:
+        items:
           items:
-            $ref: '#/components/schemas/RacingEventsStreamChange'
+            $ref: '#/components/schemas/RacingEventSummary'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - count
+      title: RacingEventListResponse
     StreamResyncEvent:
       type: object
       description: Sent when a resume token is no longer available and the client should reload the snapshot.
@@ -964,66 +1024,6 @@ components:
           type: object
           nullable: true
           additionalProperties: true
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
-    RacingEventDetail:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        data:
-          additionalProperties: true
-          type: object
-          title: Data
-      type: object
-      required:
-      - event_id
-      - data
-      title: RacingEventDetail
-    RacingEventListResponse:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/RacingEventSummary'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        count:
-          type: integer
-          title: Count
-      type: object
-      required:
-      - count
-      title: RacingEventListResponse
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

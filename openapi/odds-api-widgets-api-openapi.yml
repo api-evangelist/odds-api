@@ -234,42 +234,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
-    WidgetSelectionPrice:
-      properties:
-        selection:
-          type: string
-          title: Selection
-        price:
-          type: number
-          title: Price
-      type: object
-      required:
-      - selection
-      - price
-      title: WidgetSelectionPrice
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     WidgetEvent:
       properties:
         league:
@@ -297,6 +261,24 @@ components:
       - event_name
       - last_updated
       title: WidgetEvent
+    WidgetBookmakerOdds:
+      properties:
+        label:
+          type: string
+          title: Label
+        selections:
+          items:
+            $ref: '#/components/schemas/WidgetSelectionPrice'
+          type: array
+          title: Selections
+      type: object
+      required:
+      - label
+      title: WidgetBookmakerOdds
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     WidgetOddsTickerResponse:
       properties:
         league:
@@ -319,20 +301,38 @@ components:
       - widget_id
       - last_updated
       title: WidgetOddsTickerResponse
-    WidgetBookmakerOdds:
+    WidgetSelectionPrice:
       properties:
-        label:
+        selection:
           type: string
-          title: Label
-        selections:
-          items:
-            $ref: '#/components/schemas/WidgetSelectionPrice'
-          type: array
-          title: Selections
+          title: Selection
+        price:
+          type: number
+          title: Price
       type: object
       required:
-      - label
-      title: WidgetBookmakerOdds
+      - selection
+      - price
+      title: WidgetSelectionPrice
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
     WidgetMarket:
       properties:
         market:

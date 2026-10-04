@@ -631,20 +631,84 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    EventDetail:
+    EventListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/EventSummary'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - items
+      - count
+      title: EventListResponse
+    BookmakersResponse:
       properties:
         event_id:
           type: string
           title: Event Id
-        data:
-          additionalProperties: true
-          type: object
-          title: Data
+        items:
+          items:
+            type: string
+          type: array
+          title: Items
       type: object
       required:
       - event_id
-      - data
-      title: EventDetail
+      - items
+      title: BookmakersResponse
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    OpportunityCounts:
+      properties:
+        positive_ev:
+          type: integer
+          title: Positive Ev
+          default: 0
+        arbitrage:
+          type: integer
+          title: Arbitrage
+          default: 0
+        middle:
+          type: integer
+          title: Middle
+          default: 0
+        bonus_conversion:
+          type: integer
+          title: Bonus Conversion
+          default: 0
+      type: object
+      title: OpportunityCounts
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
     EventSummary:
       properties:
         event_id:
@@ -784,84 +848,20 @@ components:
       required:
       - event_id
       title: EventSummary
-    OpportunityCounts:
-      properties:
-        positive_ev:
-          type: integer
-          title: Positive Ev
-          default: 0
-        arbitrage:
-          type: integer
-          title: Arbitrage
-          default: 0
-        middle:
-          type: integer
-          title: Middle
-          default: 0
-        bonus_conversion:
-          type: integer
-          title: Bonus Conversion
-          default: 0
-      type: object
-      title: OpportunityCounts
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    BookmakersResponse:
+    EventDetail:
       properties:
         event_id:
           type: string
           title: Event Id
-        items:
-          items:
-            type: string
-          type: array
-          title: Items
+        data:
+          additionalProperties: true
+          type: object
+          title: Data
       type: object
       required:
       - event_id
-      - items
-      title: BookmakersResponse
-    EventListResponse:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/EventSummary'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        count:
-          type: integer
-          title: Count
-      type: object
-      required:
-      - items
-      - count
-      title: EventListResponse
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
+      - data
+      title: EventDetail
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

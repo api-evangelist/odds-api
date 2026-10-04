@@ -781,49 +781,6 @@ components:
         ev_shin_method:
           type: number
           nullable: true
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    BetsStreamDelta:
-      type: object
-      required:
-      - strategy
-      - op
-      - id
-      properties:
-        strategy:
-          type: string
-        op:
-          type: string
-          enum:
-          - upsert
-          - delete
-        id:
-          type: string
-        doc:
-          $ref: '#/components/schemas/BetOpportunity'
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
     StreamHeartbeat:
       type: object
       description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
@@ -851,31 +808,28 @@ components:
         target_refresh_interval_seconds:
           type: integer
           nullable: true
-    BetsStreamEvent:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    BetsStreamDelta:
       type: object
       required:
-      - resume
-      - events
+      - strategy
+      - op
+      - id
       properties:
-        resume:
+        strategy:
           type: string
-        events:
-          type: array
-          items:
-            $ref: '#/components/schemas/BetsStreamDelta'
-    BetsSnapshotResponse:
-      type: object
-      required:
-      - resume
-      - items
-      properties:
-        resume:
+        op:
           type: string
-          description: JSON string mapping each requested strategy to its stream resume ID.
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/BetOpportunity'
+          enum:
+          - upsert
+          - delete
+        id:
+          type: string
+        doc:
+          $ref: '#/components/schemas/BetOpportunity'
     ErrorResponse:
       type: object
       required:
@@ -895,6 +849,52 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
+    BetsStreamEvent:
+      type: object
+      required:
+      - resume
+      - events
+      properties:
+        resume:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetsStreamDelta'
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
+    BetsSnapshotResponse:
+      type: object
+      required:
+      - resume
+      - items
+      properties:
+        resume:
+          type: string
+          description: JSON string mapping each requested strategy to its stream resume ID.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetOpportunity'
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

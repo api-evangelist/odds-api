@@ -744,6 +744,255 @@ paths:
         applies_to: authenticated API-key connections
 components:
   schemas:
+    PredictionOrderBookStreamDelta:
+      properties:
+        op:
+          title: Op
+          type: string
+        orderbook:
+          $ref: '#/components/schemas/PredictionOrderBookItem'
+      required:
+      - op
+      - orderbook
+      title: PredictionOrderBookStreamDelta
+      type: object
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    PredictionOrderBookSnapshotResponse:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        as_of_ts_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: As Of Ts Ms
+        ttl_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Seconds
+        items:
+          items:
+            $ref: '#/components/schemas/PredictionOrderBookItem'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        resume:
+          type: string
+          title: Resume
+          description: Redis stream ID to resume from; pass as 'since' to /stream.
+      type: object
+      required:
+      - event_id
+      - resume
+      title: PredictionOrderBookSnapshotResponse
+    PredictionOrderBookStreamEvent:
+      properties:
+        event_id:
+          title: Event Id
+          type: string
+        resume:
+          title: Resume
+          type: string
+        changes:
+          items:
+            $ref: '#/components/schemas/PredictionOrderBookStreamDelta'
+          title: Changes
+          type: array
+      required:
+      - event_id
+      - resume
+      - changes
+      title: PredictionOrderBookStreamEvent
+      type: object
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    PredictionContractBook:
+      properties:
+        contract_id:
+          type: string
+          title: Contract Id
+        source_contract_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Contract Id
+        contract_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Name
+        outcome:
+          type: string
+          title: Outcome
+        side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Side
+        line:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Line
+        player_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Player Name
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        probability_bids:
+          items:
+            $ref: '#/components/schemas/PredictionPriceLevel'
+          type: array
+          title: Probability Bids
+        probability_asks:
+          items:
+            $ref: '#/components/schemas/PredictionPriceLevel'
+          type: array
+          title: Probability Asks
+        best_bid_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Bid Probability
+        best_bid_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Bid Size
+        best_ask_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Ask Probability
+        best_ask_size:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Best Ask Size
+        last_trade_probability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Trade Probability
+        gross_decimal_odds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Gross Decimal Odds
+        fee_adjusted_decimal_odds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Fee Adjusted Decimal Odds
+        estimated_fee_per_contract:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Estimated Fee Per Contract
+        projection_eligible:
+          type: boolean
+          title: Projection Eligible
+          default: false
+      type: object
+      required:
+      - contract_id
+      - outcome
+      title: PredictionContractBook
+    PredictionPriceLevel:
+      properties:
+        price:
+          type: number
+          exclusiveMaximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Price
+        size:
+          type: number
+          minimum: 0.0
+          title: Size
+      type: object
+      required:
+      - price
+      - size
+      title: PredictionPriceLevel
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
     PredictionOrderBookItem:
       properties:
         id:
@@ -888,255 +1137,6 @@ components:
       - market_key
       - period
       title: PredictionOrderBookItem
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    PredictionContractBook:
-      properties:
-        contract_id:
-          type: string
-          title: Contract Id
-        source_contract_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Source Contract Id
-        contract_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Contract Name
-        outcome:
-          type: string
-          title: Outcome
-        side:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Side
-        line:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Line
-        player_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Player Name
-        status:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Status
-        probability_bids:
-          items:
-            $ref: '#/components/schemas/PredictionPriceLevel'
-          type: array
-          title: Probability Bids
-        probability_asks:
-          items:
-            $ref: '#/components/schemas/PredictionPriceLevel'
-          type: array
-          title: Probability Asks
-        best_bid_probability:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Bid Probability
-        best_bid_size:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Bid Size
-        best_ask_probability:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Ask Probability
-        best_ask_size:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Best Ask Size
-        last_trade_probability:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Last Trade Probability
-        gross_decimal_odds:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Gross Decimal Odds
-        fee_adjusted_decimal_odds:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Fee Adjusted Decimal Odds
-        estimated_fee_per_contract:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Estimated Fee Per Contract
-        projection_eligible:
-          type: boolean
-          title: Projection Eligible
-          default: false
-      type: object
-      required:
-      - contract_id
-      - outcome
-      title: PredictionContractBook
-    PredictionOrderBookStreamEvent:
-      properties:
-        event_id:
-          title: Event Id
-          type: string
-        resume:
-          title: Resume
-          type: string
-        changes:
-          items:
-            $ref: '#/components/schemas/PredictionOrderBookStreamDelta'
-          title: Changes
-          type: array
-      required:
-      - event_id
-      - resume
-      - changes
-      title: PredictionOrderBookStreamEvent
-      type: object
-    PredictionOrderBookStreamDelta:
-      properties:
-        op:
-          title: Op
-          type: string
-        orderbook:
-          $ref: '#/components/schemas/PredictionOrderBookItem'
-      required:
-      - op
-      - orderbook
-      title: PredictionOrderBookStreamDelta
-      type: object
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
-    PredictionOrderBookSnapshotResponse:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        as_of_ts_ms:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: As Of Ts Ms
-        ttl_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Ttl Seconds
-        items:
-          items:
-            $ref: '#/components/schemas/PredictionOrderBookItem'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        resume:
-          type: string
-          title: Resume
-          description: Redis stream ID to resume from; pass as 'since' to /stream.
-      type: object
-      required:
-      - event_id
-      - resume
-      title: PredictionOrderBookSnapshotResponse
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
-    PredictionPriceLevel:
-      properties:
-        price:
-          type: number
-          exclusiveMaximum: 1.0
-          exclusiveMinimum: 0.0
-          title: Price
-        size:
-          type: number
-          minimum: 0.0
-          title: Size
-      type: object
-      required:
-      - price
-      - size
-      title: PredictionPriceLevel
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

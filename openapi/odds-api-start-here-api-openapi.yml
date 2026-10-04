@@ -155,6 +155,10 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     ApiRootResponse:
       type: object
       required:
@@ -175,10 +179,6 @@ components:
         reference:
           type: string
           example: /v1/reference
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     ErrorResponse:
       type: object
       required:

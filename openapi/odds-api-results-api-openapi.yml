@@ -173,26 +173,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    ResultItem:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        status:
-          type: string
-          title: Status
-          description: available|pending
-        result:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Result
-      type: object
-      required:
-      - event_id
-      - status
-      title: ResultItem
     RateLimitResponse:
       allOf:
       - $ref: '#/components/schemas/ErrorResponse'
@@ -216,6 +196,26 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
+    ResultItem:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        status:
+          type: string
+          title: Status
+          description: available|pending
+        result:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Result
+      type: object
+      required:
+      - event_id
+      - status
+      title: ResultItem
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

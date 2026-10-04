@@ -336,78 +336,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    LimitsResponse:
-      type: object
-      required:
-      - responses
-      - sse
-      properties:
-        responses:
-          type: object
-          required:
-          - events_limit_max
-          - odds_snapshot_limit_max
-          - bets_snapshot_limit_max
-          properties:
-            events_limit_max:
-              type: integer
-              example: 1000
-            odds_snapshot_limit_max:
-              type: integer
-              example: 25000
-            bets_snapshot_limit_max:
-              type: integer
-              example: 20000
-        sse:
-          type: object
-          required:
-          - heartbeat_sec_min
-          - heartbeat_sec_max
-          - max_batch_default
-          properties:
-            heartbeat_sec_min:
-              type: integer
-              example: 5
-            heartbeat_sec_max:
-              type: integer
-              example: 120
-            max_batch_default:
-              type: integer
-              example: 500
-        streams:
-          type: object
-          additionalProperties: true
-          description: Shared stream-hour, logical-byte, and concurrent-unit rules for API-key SSE and WebSocket connections.
-        plan_id:
-          type: string
-          nullable: true
-        pricing_model:
-          type: string
-          nullable: true
-        billing_status:
-          type: string
-          nullable: true
-        quotas:
-          type: object
-          additionalProperties: true
-        entitlements:
-          type: object
-          additionalProperties: true
-        add_ons:
-          type: object
-          additionalProperties: true
-        usage_unit:
-          type: string
-          nullable: true
-          example: api_credits
-        overage_policy:
-          type: string
-          nullable: true
-          example: hard_cap
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     ApiIdentityResponse:
       type: object
       description: Authenticated API identity and enabled product capabilities.
@@ -425,6 +353,10 @@ components:
         membership_tier:
           type: integer
           nullable: true
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     UsageResponse:
       type: object
       description: Quota and usage counters for the API key. New odds-api.net plans report API credits; legacy keys may still expose request-count fields.
@@ -498,6 +430,74 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
+    LimitsResponse:
+      type: object
+      required:
+      - responses
+      - sse
+      properties:
+        responses:
+          type: object
+          required:
+          - events_limit_max
+          - odds_snapshot_limit_max
+          - bets_snapshot_limit_max
+          properties:
+            events_limit_max:
+              type: integer
+              example: 1000
+            odds_snapshot_limit_max:
+              type: integer
+              example: 25000
+            bets_snapshot_limit_max:
+              type: integer
+              example: 20000
+        sse:
+          type: object
+          required:
+          - heartbeat_sec_min
+          - heartbeat_sec_max
+          - max_batch_default
+          properties:
+            heartbeat_sec_min:
+              type: integer
+              example: 5
+            heartbeat_sec_max:
+              type: integer
+              example: 120
+            max_batch_default:
+              type: integer
+              example: 500
+        streams:
+          type: object
+          additionalProperties: true
+          description: Shared stream-hour, logical-byte, and concurrent-unit rules for API-key SSE and WebSocket connections.
+        plan_id:
+          type: string
+          nullable: true
+        pricing_model:
+          type: string
+          nullable: true
+        billing_status:
+          type: string
+          nullable: true
+        quotas:
+          type: object
+          additionalProperties: true
+        entitlements:
+          type: object
+          additionalProperties: true
+        add_ons:
+          type: object
+          additionalProperties: true
+        usage_unit:
+          type: string
+          nullable: true
+          example: api_credits
+        overage_policy:
+          type: string
+          nullable: true
+          example: hard_cap
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

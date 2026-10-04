@@ -715,6 +715,37 @@ paths:
         applies_to: authenticated API-key connections
 components:
   schemas:
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     RacingOddsStreamEvent:
       properties:
         event_id:
@@ -857,10 +888,6 @@ components:
       - bookmaker_name
       - race_id
       title: RacingOddsBookmakerSnapshot
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     RacingOddsStreamDelta:
       properties:
         op:
@@ -883,27 +910,6 @@ components:
       - bookmaker_name
       title: RacingOddsStreamDelta
       type: object
-    StreamResyncEvent:
-      type: object
-      description: Sent when a resume token is no longer available and the client should reload the snapshot.
-      required:
-      - reason
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        selection_key:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        reason:
-          type: string
-          example: trimmed
-        snapshot_id:
-          type: string
-          nullable: true
     RacingOddsSnapshotResponse:
       properties:
         event_id:
@@ -963,33 +969,6 @@ components:
       - event_id
       - resume
       title: RacingOddsSnapshotResponse
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
     ErrorResponse:
       type: object
       required:
@@ -1009,6 +988,27 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
+    StreamResyncEvent:
+      type: object
+      description: Sent when a resume token is no longer available and the client should reload the snapshot.
+      required:
+      - reason
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        selection_key:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          example: trimmed
+        snapshot_id:
+          type: string
+          nullable: true
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

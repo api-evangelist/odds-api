@@ -178,6 +178,38 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
+    PublicStatusSource:
+      properties:
+        fresh:
+          type: boolean
+          title: Fresh
+        age_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Age Seconds
+      type: object
+      required:
+      - fresh
+      title: PublicStatusSource
+    PublicStatusRateLimits:
+      properties:
+        status:
+          type: string
+          title: Status
+        throttled_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Throttled Pct
+      type: object
+      required:
+      - status
+      title: PublicStatusRateLimits
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     ErrorResponse:
       type: object
       required:
@@ -220,63 +252,6 @@ components:
       - name
       - status
       title: PublicStatusComponent
-    PublicStatusRateLimits:
-      properties:
-        status:
-          type: string
-          title: Status
-        throttled_pct:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Throttled Pct
-      type: object
-      required:
-      - status
-      title: PublicStatusRateLimits
-    PublicStatusMetrics:
-      properties:
-        uptime_pct:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Uptime Pct
-        p50_ms:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: P50 Ms
-        p95_ms:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: P95 Ms
-        p99_ms:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: P99 Ms
-        error_rate_pct:
-          anyOf:
-          - type: number
-          - type: 'null'
-          title: Error Rate Pct
-      type: object
-      title: PublicStatusMetrics
-    PublicStatusSource:
-      properties:
-        fresh:
-          type: boolean
-          title: Fresh
-        age_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Age Seconds
-      type: object
-      required:
-      - fresh
-      title: PublicStatusSource
     PublicStatusResponse:
       properties:
         status:
@@ -324,10 +299,35 @@ components:
       - rate_limits
       - source
       title: PublicStatusResponse
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    PublicStatusMetrics:
+      properties:
+        uptime_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Uptime Pct
+        p50_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P50 Ms
+        p95_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P95 Ms
+        p99_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: P99 Ms
+        error_rate_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Error Rate Pct
+      type: object
+      title: PublicStatusMetrics
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

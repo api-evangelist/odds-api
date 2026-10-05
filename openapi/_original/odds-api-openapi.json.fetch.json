@@ -1,0 +1,12 @@
+{
+ "url": "https://odds-api.net/openapi.json",
+ "requested_url": "https://odds-api.net/openapi.json",
+ "status": 200,
+ "content_type": "application/json",
+ "bytes": 268677,
+ "sha256": "a9c14f34dc7644d9f3170ebc3f88202c983904032f90f30f34ac8a450c47c9b9",
+ "fetched_at": "2026-10-04",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "equivalent",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the provider's current document describes the same operations (Jaccard 0.955), but the bytes differ, so the archive is an earlier or reformatted copy."
+}

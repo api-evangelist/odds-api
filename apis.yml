@@ -682,6 +682,8 @@ generated:
   confidence: 95
   at: '2026-09-17T03:58:31.951Z'
 common:
+- type: Pricing
+  url: https://odds-api.net/pricing
 - type: AgentSkill
   url: https://github.com/odds-api/odds-api/blob/main/AGENTS.md
 - type: Overlay

@@ -682,6 +682,10 @@ generated:
   confidence: 95
   at: '2026-09-17T03:58:31.951Z'
 common:
+- type: Plans
+  url: plans/odds-api-plans-pricing.yml
+- type: RateLimits
+  url: rate-limits/odds-api-rate-limits.yml
 - type: Pricing
   url: https://odds-api.net/pricing
 - type: AgentSkill

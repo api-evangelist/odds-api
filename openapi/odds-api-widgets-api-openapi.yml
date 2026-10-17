@@ -234,6 +234,28 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
+    WidgetOddsTickerResponse:
+      properties:
+        league:
+          type: string
+          title: League
+        widget_id:
+          type: string
+          title: Widget Id
+        last_updated:
+          type: string
+          title: Last Updated
+        events:
+          items:
+            $ref: '#/components/schemas/WidgetEvent'
+          type: array
+          title: Events
+      type: object
+      required:
+      - league
+      - widget_id
+      - last_updated
+      title: WidgetOddsTickerResponse
     WidgetEvent:
       properties:
         league:
@@ -261,46 +283,6 @@ components:
       - event_name
       - last_updated
       title: WidgetEvent
-    WidgetBookmakerOdds:
-      properties:
-        label:
-          type: string
-          title: Label
-        selections:
-          items:
-            $ref: '#/components/schemas/WidgetSelectionPrice'
-          type: array
-          title: Selections
-      type: object
-      required:
-      - label
-      title: WidgetBookmakerOdds
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    WidgetOddsTickerResponse:
-      properties:
-        league:
-          type: string
-          title: League
-        widget_id:
-          type: string
-          title: Widget Id
-        last_updated:
-          type: string
-          title: Last Updated
-        events:
-          items:
-            $ref: '#/components/schemas/WidgetEvent'
-          type: array
-          title: Events
-      type: object
-      required:
-      - league
-      - widget_id
-      - last_updated
-      title: WidgetOddsTickerResponse
     WidgetSelectionPrice:
       properties:
         selection:
@@ -314,6 +296,10 @@ components:
       - selection
       - price
       title: WidgetSelectionPrice
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
     ErrorResponse:
       type: object
       required:
@@ -347,6 +333,20 @@ components:
       required:
       - market
       title: WidgetMarket
+    WidgetBookmakerOdds:
+      properties:
+        label:
+          type: string
+          title: Label
+        selections:
+          items:
+            $ref: '#/components/schemas/WidgetSelectionPrice'
+          type: array
+          title: Selections
+      type: object
+      required:
+      - label
+      title: WidgetBookmakerOdds
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

@@ -581,114 +581,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    CoverageSource:
-      properties:
-        markets_are_approximate:
-          type: boolean
-          title: Markets Are Approximate
-          default: true
-        lookback_days:
-          type: integer
-          title: Lookback Days
-      type: object
-      required:
-      - lookback_days
-      title: CoverageSource
-    BookmakerCountriesCatalogResponse:
-      type: object
-      required:
-      - items
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/BookmakerCountryCatalogItem'
-    CoverageLeague:
-      properties:
-        sport:
-          type: string
-          title: Sport
-        league:
-          type: string
-          title: League
-      type: object
-      required:
-      - sport
-      - league
-      title: CoverageLeague
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    BookmakerCatalogResponse:
-      type: object
-      required:
-      - items
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/BookmakerCatalogItem'
-    CoverageResponse:
-      properties:
-        as_of:
-          type: string
-          title: As Of
-        bookmakers:
-          items:
-            $ref: '#/components/schemas/CoverageBookmaker'
-          type: array
-          title: Bookmakers
-        sports:
-          items:
-            type: string
-          type: array
-          title: Sports
-        leagues:
-          items:
-            $ref: '#/components/schemas/CoverageLeague'
-          type: array
-          title: Leagues
-        markets:
-          items:
-            $ref: '#/components/schemas/CoverageMarket'
-          type: array
-          title: Markets
-        source:
-          $ref: '#/components/schemas/CoverageSource'
-      type: object
-      required:
-      - as_of
-      - source
-      title: CoverageResponse
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
-    StringListResponse:
-      type: object
-      required:
-      - items
-      properties:
-        items:
-          type: array
-          items:
-            type: string
     CoverageMarket:
       properties:
         bookmaker:
@@ -728,24 +620,6 @@ components:
       - last_seen_at
       - sample_event_id
       title: CoverageMarket
-    BookmakerCountryCatalogItem:
-      type: object
-      required:
-      - country_code
-      - bookmakers
-      properties:
-        country_code:
-          type: string
-          example: AU
-        country:
-          type: string
-          nullable: true
-          example: Australia
-        bookmakers:
-          type: array
-          items:
-            type: string
-          description: Canonical bookmaker identifiers active for this country code.
     BookmakerCatalogItem:
       type: object
       required:
@@ -769,6 +643,132 @@ components:
           nullable: true
           description: Canonical source bookmaker when this bookmaker reuses another bookmaker's sports odds.
           example: betnation
+    CoverageLeague:
+      properties:
+        sport:
+          type: string
+          title: Sport
+        league:
+          type: string
+          title: League
+      type: object
+      required:
+      - sport
+      - league
+      title: CoverageLeague
+    BookmakerCountriesCatalogResponse:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookmakerCountryCatalogItem'
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    CoverageResponse:
+      properties:
+        as_of:
+          type: string
+          title: As Of
+        bookmakers:
+          items:
+            $ref: '#/components/schemas/CoverageBookmaker'
+          type: array
+          title: Bookmakers
+        sports:
+          items:
+            type: string
+          type: array
+          title: Sports
+        leagues:
+          items:
+            $ref: '#/components/schemas/CoverageLeague'
+          type: array
+          title: Leagues
+        markets:
+          items:
+            $ref: '#/components/schemas/CoverageMarket'
+          type: array
+          title: Markets
+        source:
+          $ref: '#/components/schemas/CoverageSource'
+      type: object
+      required:
+      - as_of
+      - source
+      title: CoverageResponse
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    BookmakerCountryCatalogItem:
+      type: object
+      required:
+      - country_code
+      - bookmakers
+      properties:
+        country_code:
+          type: string
+          example: AU
+        country:
+          type: string
+          nullable: true
+          example: Australia
+        bookmakers:
+          type: array
+          items:
+            type: string
+          description: Canonical bookmaker identifiers active for this country code.
+    CoverageSource:
+      properties:
+        markets_are_approximate:
+          type: boolean
+          title: Markets Are Approximate
+          default: true
+        lookback_days:
+          type: integer
+          title: Lookback Days
+      type: object
+      required:
+      - lookback_days
+      title: CoverageSource
+    BookmakerCatalogResponse:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookmakerCatalogItem'
+    StringListResponse:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            type: string
     CoverageBookmaker:
       properties:
         bookmaker:

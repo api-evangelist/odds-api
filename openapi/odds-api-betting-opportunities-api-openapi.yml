@@ -736,6 +736,99 @@ paths:
         applies_to: authenticated API-key connections
 components:
   schemas:
+    BetsStreamEvent:
+      type: object
+      required:
+      - resume
+      - events
+      properties:
+        resume:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetsStreamDelta'
+    BetsStreamDelta:
+      type: object
+      required:
+      - strategy
+      - op
+      - id
+      properties:
+        strategy:
+          type: string
+        op:
+          type: string
+          enum:
+          - upsert
+          - delete
+        id:
+          type: string
+        doc:
+          $ref: '#/components/schemas/BetOpportunity'
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
+          oneOf:
+          - type: string
+          - type: object
+          - type: array
+            items:
+              type: object
+        code:
+          type: string
+          description: Optional stable error code when provided by the endpoint.
+        request_id:
+          type: string
+          description: Optional request identifier for support/debugging.
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    BetsSnapshotResponse:
+      type: object
+      required:
+      - resume
+      - items
+      properties:
+        resume:
+          type: string
+          description: JSON string mapping each requested strategy to its stream resume ID.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BetOpportunity'
+    StreamHeartbeat:
+      type: object
+      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          nullable: true
+        resume:
+          type: string
+          nullable: true
+        as_of_ts_ms:
+          type: integer
+          nullable: true
+        snapshot_capture_ts_ms:
+          type: integer
+          nullable: true
+        bookmaker_as_of_ts_ms:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_bookmaker_as_of_ts_ms:
+          type: integer
+          nullable: true
+        target_refresh_interval_seconds:
+          type: integer
+          nullable: true
     BetOpportunity:
       type: object
       description: A normalized betting opportunity. Strategy-specific fields may be present.
@@ -781,86 +874,6 @@ components:
         ev_shin_method:
           type: number
           nullable: true
-    StreamHeartbeat:
-      type: object
-      description: Heartbeat payload. All streams use it as a liveness signal; event-odds streams also include the latest event and bookmaker freshness metadata so a no-price-change capture is observable.
-      additionalProperties: false
-      properties:
-        event_id:
-          type: string
-          nullable: true
-        resume:
-          type: string
-          nullable: true
-        as_of_ts_ms:
-          type: integer
-          nullable: true
-        snapshot_capture_ts_ms:
-          type: integer
-          nullable: true
-        bookmaker_as_of_ts_ms:
-          type: object
-          additionalProperties:
-            type: integer
-        oldest_bookmaker_as_of_ts_ms:
-          type: integer
-          nullable: true
-        target_refresh_interval_seconds:
-          type: integer
-          nullable: true
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
-    BetsStreamDelta:
-      type: object
-      required:
-      - strategy
-      - op
-      - id
-      properties:
-        strategy:
-          type: string
-        op:
-          type: string
-          enum:
-          - upsert
-          - delete
-        id:
-          type: string
-        doc:
-          $ref: '#/components/schemas/BetOpportunity'
-    ErrorResponse:
-      type: object
-      required:
-      - detail
-      properties:
-        detail:
-          description: Human-readable error detail. FastAPI may return a string or a validation-error object.
-          oneOf:
-          - type: string
-          - type: object
-          - type: array
-            items:
-              type: object
-        code:
-          type: string
-          description: Optional stable error code when provided by the endpoint.
-        request_id:
-          type: string
-          description: Optional request identifier for support/debugging.
-    BetsStreamEvent:
-      type: object
-      required:
-      - resume
-      - events
-      properties:
-        resume:
-          type: string
-        events:
-          type: array
-          items:
-            $ref: '#/components/schemas/BetsStreamDelta'
     StreamResyncEvent:
       type: object
       description: Sent when a resume token is no longer available and the client should reload the snapshot.
@@ -882,19 +895,6 @@ components:
         snapshot_id:
           type: string
           nullable: true
-    BetsSnapshotResponse:
-      type: object
-      required:
-      - resume
-      - items
-      properties:
-        resume:
-          type: string
-          description: JSON string mapping each requested strategy to its stream resume ID.
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/BetOpportunity'
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

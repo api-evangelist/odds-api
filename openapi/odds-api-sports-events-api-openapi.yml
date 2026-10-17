@@ -631,45 +631,6 @@ paths:
       x-rate-limit-note: Handle HTTP 429 with backoff and avoid tight polling loops.
 components:
   schemas:
-    EventListResponse:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/EventSummary'
-          type: array
-          title: Items
-        next_cursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Next Cursor
-        count:
-          type: integer
-          title: Count
-      type: object
-      required:
-      - items
-      - count
-      title: EventListResponse
-    BookmakersResponse:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        items:
-          items:
-            type: string
-          type: array
-          title: Items
-      type: object
-      required:
-      - event_id
-      - items
-      title: BookmakersResponse
-    RateLimitResponse:
-      allOf:
-      - $ref: '#/components/schemas/ErrorResponse'
-      description: Rate-limit response. Retry after the window or reduce polling frequency.
     OpportunityCounts:
       properties:
         positive_ev:
@@ -709,6 +670,44 @@ components:
         request_id:
           type: string
           description: Optional request identifier for support/debugging.
+    RateLimitResponse:
+      allOf:
+      - $ref: '#/components/schemas/ErrorResponse'
+      description: Rate-limit response. Retry after the window or reduce polling frequency.
+    EventListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/EventSummary'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - items
+      - count
+      title: EventListResponse
+    EventDetail:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        data:
+          additionalProperties: true
+          type: object
+          title: Data
+      type: object
+      required:
+      - event_id
+      - data
+      title: EventDetail
     EventSummary:
       properties:
         event_id:
@@ -848,20 +847,21 @@ components:
       required:
       - event_id
       title: EventSummary
-    EventDetail:
+    BookmakersResponse:
       properties:
         event_id:
           type: string
           title: Event Id
-        data:
-          additionalProperties: true
-          type: object
-          title: Data
+        items:
+          items:
+            type: string
+          type: array
+          title: Items
       type: object
       required:
       - event_id
-      - data
-      title: EventDetail
+      - items
+      title: BookmakersResponse
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

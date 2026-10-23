@@ -2014,3 +2014,9 @@ components:
       in: header
       name: X-API-Key
       description: Send your API key in this header on every request.
+x-provenance:
+  method: harvested
+  publisher: Odds API
+  source: https://odds-api.net/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
